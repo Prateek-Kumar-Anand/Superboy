@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Operation Iron Pixel</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>Operation Iron Pixel</h1>
+        <p>Retro run-and-gun prototype inspired by classic arcade action.</p>
+      </header>
+
+      <section id="character-select" class="panel">
+        <h2>Choose Your Operative</h2>
+        <p>Selection is permanent for this run. To switch, restart campaign.</p>
+        <div class="character-grid">
+          <button class="character-card" data-character="naveen">
+            <h3>Naveen</h3>
+            <p>Main Character</p>
+          </button>
+          <button class="character-card" data-character="radhika">
+            <h3>Radhika</h3>
+            <p>Female Playable Character</p>
+          </button>
+        </div>
+      </section>
+
+      <main id="game-ui" class="hidden">
+        <aside class="panel left-panel">
+          <h2>Loadout</h2>
+          <p id="selected-character"></p>
+          <h3>Guns (35)</h3>
+          <ul id="guns-list"></ul>
+          <h3>Armored Vehicles (4)</h3>
+          <ul id="vehicles-list"></ul>
+          <h3>Power-Ups (9)</h3>
+          <ul id="powerups-list"></ul>
+        </aside>
+
+        <section class="game-stage panel">
+          <div class="hud">
+            <span id="current-bg-label"></span>
+            <span id="villain-label"></span>
+            <button id="next-stage">Next Stage</button>
+            <button id="restart-run">Restart Run</button>
+          </div>
+          <canvas id="game-canvas" width="960" height="540"></canvas>
+          <p class="hint">Placeholder pixel-art scene: future assets can plug into the rendering layers.</p>
+        </section>
+
+        <aside class="panel right-panel">
+          <h2>Major Villains (5)</h2>
+          <ol id="villains-list"></ol>
+          <h3>World Themes (5)</h3>
+          <ul id="themes-list"></ul>
+          <h3>Upgrade Notes</h3>
+          <ul>
+            <li>Entity-driven content config in <code>gameData</code>.</li>
+            <li>Renderer separated from game state logic.</li>
+            <li>Ready to swap placeholder sprites with real sprite sheets.</li>
+          </ul>
+        </aside>
+      </main>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>
