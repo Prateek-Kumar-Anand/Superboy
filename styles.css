@@ -1,112 +1,210 @@
+/* ── RESET & BASE ─────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  --bg: #14141c;
-  --panel: #1e1e2a;
-  --panel-border: #6de0ff;
-  --accent: #ffd166;
-  --text: #f5f7fa;
+  --bg:        #0e0e18;
+  --panel:     #1a1a28;
+  --cyan:      #6de0ff;
+  --gold:      #ffd166;
+  --pink:      #ff74c6;
+  --text:      #f0f4ff;
+  --dim:       #7a8aaa;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: "Press Start 2P", "Courier New", monospace;
-  background: radial-gradient(circle at top, #202235, var(--bg));
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
   color: var(--text);
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
 }
 
 #app {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 1rem;
-}
-
-header,
-.panel {
-  background: var(--panel);
-  border: 3px solid var(--panel-border);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-h1, h2, h3, p {
-  margin-top: 0;
-}
-
-.character-grid {
+  position: relative;
   display: flex;
-  gap: 1rem;
-}
-
-.character-card {
-  flex: 1;
-  border: 2px solid var(--accent);
-  background: #303045;
-  color: white;
-  padding: 1rem;
-  cursor: pointer;
-}
-
-#game-ui {
-  display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  gap: 1rem;
-}
-
-.hidden {
-  display: none !important;
-}
-
-.left-panel,
-.right-panel {
-  max-height: 820px;
-  overflow-y: auto;
-}
-
-.game-stage {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.hud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
   align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
 }
 
-button {
-  font-family: inherit;
-  border: 2px solid #fff;
-  background: #333;
-  color: #fff;
-  padding: 0.4rem 0.6rem;
-  cursor: pointer;
-}
-
+/* ── CANVAS ───────────────────────────────────────────── */
 #game-canvas {
-  width: 100%;
-  border: 4px solid #fff;
+  display: block;
+  max-width: 100%;
+  max-height: 100vh;
+  aspect-ratio: 16 / 9;
+  border: 3px solid var(--cyan);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #101820;
 }
 
-ul, ol {
-  padding-left: 1.2rem;
+/* ── OVERLAYS ─────────────────────────────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 8, 16, 0.94);
+  z-index: 10;
 }
 
-.hint {
-  color: #b8c5d6;
-  font-size: 0.8rem;
+.overlay.hidden { display: none; }
+
+/* ── SELECT SCREEN ────────────────────────────────────── */
+.select-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  padding: 2.5rem;
+  width: min(800px, 95vw);
 }
 
-@media (max-width: 1200px) {
-  #game-ui {
-    grid-template-columns: 1fr;
-  }
+.title-block { text-align: center; }
+
+.title-block h1 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(255, 209, 102, 0.5);
+  line-height: 1.1;
+  margin-bottom: 0.6rem;
+}
+
+.subtitle {
+  font-size: clamp(0.65rem, 1.5vw, 0.85rem);
+  color: var(--dim);
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+}
+
+/* ── CHARACTER CARDS ──────────────────────────────────── */
+.char-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.char-card {
+  background: var(--panel);
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 1.6rem 1.2rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.char-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+}
+
+.naveen-card:hover { border-color: var(--cyan); box-shadow: 0 0 20px rgba(109,224,255,0.25); }
+.radhika-card:hover { border-color: var(--pink); box-shadow: 0 0 20px rgba(255,116,198,0.25); }
+
+.char-portrait {
+  width: 72px; height: 72px;
+  border-radius: 4px;
+  margin: 0 auto 1rem;
+  font-size: 2.2rem;
+  font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.naveen-portrait  { background: rgba(63,226,255,0.15); color: var(--cyan);  border: 2px solid var(--cyan); }
+.radhika-portrait { background: rgba(255,116,198,0.15); color: var(--pink); border: 2px solid var(--pink); }
+
+.char-card h2 {
+  font-size: 1.3rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.3rem;
+}
+
+.naveen-card  h2 { color: var(--cyan); }
+.radhika-card h2 { color: var(--pink); }
+
+.char-card p {
+  font-size: 0.72rem;
+  color: var(--dim);
+  margin-bottom: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.char-card ul {
+  list-style: none;
+  font-size: 0.7rem;
+  color: #aabbcc;
+  text-align: left;
+  padding-left: 0.5rem;
+  line-height: 2;
+}
+
+.char-card ul li::before { content: '▸ '; color: var(--gold); }
+
+/* ── CONTROLS HINT ────────────────────────────────────── */
+.controls-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: center;
+  font-size: 0.68rem;
+  color: var(--dim);
+  letter-spacing: 0.05em;
+}
+
+.controls-hint span {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid #333;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+}
+
+/* ── GAME OVER SCREEN ─────────────────────────────────── */
+.gameover-box {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.gameover-title {
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  color: #ff4444;
+  text-shadow: 0 0 30px rgba(255,68,68,0.6);
+  letter-spacing: 0.12em;
+}
+
+.score-display {
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+
+.score-display span { font-size: 1.4em; }
+
+.restart-btn {
+  font-family: inherit;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  padding: 0.7rem 2rem;
+  background: transparent;
+  border: 2px solid var(--cyan);
+  color: var(--cyan);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border-radius: 4px;
+}
+
+.restart-btn:hover {
+  background: var(--cyan);
+  color: #000;
 }
