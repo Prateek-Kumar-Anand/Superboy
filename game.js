@@ -12,13 +12,13 @@ const CFG = {
 
 // ── SPRITE CONFIGS ─────────────────────────────────────────────
 const NAV = {
-  frameW:120,frameH:80,scale:2.2,
+  frameW:120,frameH:80,scale:2.2,feetDY:-176,
   anims:{
     idle:      {src:'sprites/naveen_new/_Idle.png',      frames:10,fps:8},
     run:       {src:'sprites/naveen_new/_Run.png',       frames:10,fps:14},
     jump:      {src:'sprites/naveen_new/_Jump.png',      frames:3, fps:8},
     fall:      {src:'sprites/naveen_new/_Fall.png',      frames:3, fps:8},
-    crouch:    {src:'sprites/naveen_new/_Crouch.png',    frames:1, fps:6},
+    crouch:    {src:'sprites/naveen_new/_CrouchFull.png',frames:3, fps:6},
     crouchwalk:{src:'sprites/naveen_new/_CrouchWalk.png',frames:8, fps:10},
     slide:     {src:'sprites/naveen_new/_SlideFull.png', frames:4, fps:10},
     attack:    {src:'sprites/naveen_new/_Attack.png',    frames:4, fps:14,loop:false},
@@ -28,7 +28,7 @@ const NAV = {
   }
 };
 const RAD = {
-  frameW:64,frameH:64,scale:2.5,
+  frameW:64,frameH:64,scale:2.5,feetDY:-110,
   anims:{
     idle:  {src:'sprites/radhika/idle.png', frames:6,fps:6},
     run:   {src:'sprites/radhika/walk.png', frames:6,fps:10},
@@ -43,7 +43,7 @@ const RAD = {
   }
 };
 const SOLDIER_CFG = {
-  frameW:100,frameH:100,scale:1.6,
+  frameW:100,frameH:100,scale:1.6,feetDY:-91,
   anims:{
     idle:  {src:'sprites/soldier/Soldier-Idle.png',     frames:6,fps:6},
     walk:  {src:'sprites/soldier/Soldier-Walk.png',     frames:8,fps:10},
@@ -236,7 +236,7 @@ function spawnSoldier(x,facing){
 
 function spawnChest(x){
   chests.push({
-    x,y:CFG.GROUND_Y-30,
+    x,y:CFG.GROUND_Y,
     open:false,locked:false,
     sequence:['ArrowUp','ArrowUp','ArrowUp'],
     progress:0,active:false,
@@ -651,7 +651,7 @@ function updateBullets(){
 
     // Hit boss
     if(bossActive&&boss&&!boss.dead&&!boss.deathDone){
-      if(Math.abs(b.x-boss.x)<60&&Math.abs(b.y-(boss.y-90))<90){
+      if(Math.abs(b.x-boss.x)<60&&Math.abs(b.y-(boss.y-175))<140){
         if(boss.shielded){
           // Bullets bounce off shield
           b.alive=false;
@@ -850,12 +850,12 @@ function drawEnemies(){
     ctx.save();ctx.translate(sx,e.y);
     if(e.facing<0)ctx.scale(-1,1);
     if(img?.complete&&img.naturalWidth>0)
-      ctx.drawImage(img,e.anim.frame*SOLDIER_CFG.frameW,0,SOLDIER_CFG.frameW,SOLDIER_CFG.frameH,-dw/2,-dh,dw,dh);
-    else{ctx.fillStyle='#4a4a5a';ctx.fillRect(-20,-dh,40,dh);}
+      ctx.drawImage(img,e.anim.frame*SOLDIER_CFG.frameW,0,SOLDIER_CFG.frameW,SOLDIER_CFG.frameH,-dw/2,-91,dw,dh);
+    else{ctx.fillStyle='#4a4a5a';ctx.fillRect(-20,-91,40,91);}
     ctx.restore();
     if(e.hp<e.maxHp&&!e.dead){
-      ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(sx-22,e.y-172,44,6);
-      ctx.fillStyle='#f00';ctx.fillRect(sx-22,e.y-172,(e.hp/e.maxHp)*44,6);
+      ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(sx-22,e.y-100,44,6);
+      ctx.fillStyle='#f00';ctx.fillRect(sx-22,e.y-100,(e.hp/e.maxHp)*44,6);
     }
   }
 }
@@ -898,7 +898,7 @@ function drawBoss(){
   ctx.translate(sx,sy);
   if(boss.facing>0)ctx.scale(-1,1);
   if(img?.complete&&img.naturalWidth>0)
-    ctx.drawImage(img,0,0,140,93,-dw/2,-dh,dw,dh);
+    ctx.drawImage(img,0,0,140,93,-dw/2,-350,dw,dh);
   else{
     ctx.fillStyle='#880000';ctx.fillRect(-55,-dh,110,dh);
     ctx.fillStyle='#ff2200';ctx.fillRect(-35,-dh-20,70,22);
@@ -954,17 +954,23 @@ function drawPlayer(){
 function drawPlayerSprite(){
   const p=player,cfg=p.cfg;
   const img=images[p.charKey]?.[p.anim.name];
-  const dw=cfg.frameW*cfg.scale,dh=cfg.frameH*cfg.scale;
+  const dw=cfg.frameW*cfg.scale;
+  const dh=cfg.frameH*cfg.scale;
+  const dy=cfg.feetDY||-dh;
   const crouch=p.crouching||p.sliding;
   ctx.save();
   ctx.translate(p.x-camera.x+camShake.x,p.y+camShake.y);
   if(p.facing<0)ctx.scale(-1,1);
-  if(crouch)ctx.scale(1,0.6);
-  if(img?.complete&&img.naturalWidth>0)
-    ctx.drawImage(img,p.anim.frame*cfg.frameW,0,cfg.frameW,cfg.frameH,-dw/2,crouch?-dh*0.9:-dh,dw,dh);
-  else{
-    ctx.fillStyle=p.charKey==='naveen'?'#3fe2ff':'#ff74c6';
-    ctx.fillRect(-22,crouch?-45:-88,44,crouch?45:88);
+  if(crouch){
+    ctx.save();ctx.scale(1,0.6);
+    if(img?.complete&&img.naturalWidth>0)
+      ctx.drawImage(img,p.anim.frame*cfg.frameW,0,cfg.frameW,cfg.frameH,-dw/2,dy/0.6,dw,dh);
+    else{ctx.fillStyle=p.charKey==='naveen'?'#3fe2ff':'#ff74c6';ctx.fillRect(-22,-55,44,55);}
+    ctx.restore();
+  } else {
+    if(img?.complete&&img.naturalWidth>0)
+      ctx.drawImage(img,p.anim.frame*cfg.frameW,0,cfg.frameW,cfg.frameH,-dw/2,dy,dw,dh);
+    else{ctx.fillStyle=p.charKey==='naveen'?'#3fe2ff':'#ff74c6';ctx.fillRect(-22,-90,44,90);}
   }
   ctx.restore();
 }
@@ -1718,7 +1724,7 @@ function updateBulletsL2(){
 
     // Hit Mamulaus
     if(bossActive&&mamulaus&&!mamulaus.dead){
-      if(Math.abs(b.x-mamulaus.x)<80&&Math.abs(b.y-(mamulaus.y+mamulaus.floatY-130))<110){
+      if(Math.abs(b.x-mamulaus.x)<80&&Math.abs(b.y-(mamulaus.y+mamulaus.floatY-125))<100){
         if(mamulaus.shielded){
           b.alive=false;
           spawnParticles(mamulaus.x,mamulaus.y-130,'#cc44ff',4);
@@ -1918,7 +1924,7 @@ function drawJenny(){
   const dw=JENNY_CFG.frameW*JENNY_CFG.scale,dh=JENNY_CFG.frameH*JENNY_CFG.scale;
   ctx.save();ctx.translate(sx,CFG.GROUND_Y);
   if(img?.complete&&img.naturalWidth>0)
-    ctx.drawImage(img,jennyAnim.frame*JENNY_CFG.frameW,0,JENNY_CFG.frameW,JENNY_CFG.frameH,-dw/2,-dh,dw,dh);
+    ctx.drawImage(img,jennyAnim.frame*JENNY_CFG.frameW,0,JENNY_CFG.frameW,JENNY_CFG.frameH,-dw/2,-118,dw,dh);
   else{
     ctx.fillStyle='#ff74c6';ctx.fillRect(-16,-70,32,70);
     ctx.fillStyle='#ffddee';ctx.fillRect(-10,-82,20,14);
@@ -1960,7 +1966,7 @@ function drawMamulaus(){
   ctx.translate(sx,sy);
   if(mamulaus.facing>0)ctx.scale(-1,1);
   if(img?.complete&&img.naturalWidth>0)
-    ctx.drawImage(img,mamulaus.anim.frame*250,0,250,250,-dw/2,-dh,dw,dh);
+    ctx.drawImage(img,mamulaus.anim.frame*250,0,250,250,-dw/2,-250,dw,dh);
   else{
     ctx.fillStyle='#440088';ctx.fillRect(-50,-dh,100,dh);
     ctx.fillStyle='#cc44ff';ctx.fillRect(-30,-dh-20,60,22);
@@ -2151,7 +2157,7 @@ function spawnL3Enemy(x, facing, heavy=false){
 function spawnL3Chest(id, x){
   const codeInfo = JENNY_CODES.find(c=>c.id===id);
   l3ChestCode[id]={
-    id,x,y:CFG.GROUND_Y-30,
+    id,x,y:CFG.GROUND_Y,
     open:false,locked:false,
     codeRevealed:false,        // jenny told us the code
     sequence: codeInfo.sequence,
@@ -2422,7 +2428,7 @@ function updateAvera(){
 
   // Contact damage
   if(player.invincible===0&&!player.dead&&!avera.defending){
-    if(Math.abs(avera.x-player.x)<50&&Math.abs(avera.y-player.y)<110){
+    if(Math.abs(avera.x-player.x)<50&&Math.abs((avera.y-80)-player.y)<100){
       hurtPlayer(avera.dashing?18:10);flashTimer=20;
     }
   }
@@ -2475,7 +2481,7 @@ function updateBulletsL3(){
     if(b.x<camera.x-150||b.x>camera.x+CFG.CANVAS_W+150){b.alive=false;continue;}
     if(bossActive&&avera&&!avera.dead){
       // Avera blocks bullets when defending
-      if(Math.abs(b.x-avera.x)<55&&Math.abs(b.y-(avera.y-60))<70){
+      if(Math.abs(b.x-avera.x)<55&&Math.abs(b.y-(avera.y-80))<80){
         if(avera.defending){
           b.alive=false;
           spawnParticles(avera.x,avera.y-60,'#334488',4);
@@ -2633,9 +2639,9 @@ function drawL3Chests(){
     if(revealed&&!ch.open&&!ch.locked){ctx.shadowColor='#ffd166';ctx.shadowBlur=20;}
     else if(!revealed){ctx.shadowColor='#334455';ctx.shadowBlur=8;}
     ctx.fillStyle=ch.locked?'#442200':ch.open?'#664400':revealed?'#8B4513':'#1a1a2a';
-    ctx.fillRect(sx-24,sy-30,48,30);
+    ctx.fillRect(sx-24,sy-40,48,40);
     ctx.fillStyle=ch.locked?'#661100':ch.open?'#cc8800':revealed?'#cd853f':'#2a2a4a';
-    ctx.fillRect(sx-24,sy-36,48,10);
+    ctx.fillRect(sx-24,sy-44,48,10);
     ctx.restore();
 
     // Icon
@@ -2748,7 +2754,7 @@ function drawAvera(){
   ctx.translate(sx,sy);
   if(avera.facing>0)ctx.scale(-1,1);
   if(img?.complete&&img.naturalWidth>0)
-    ctx.drawImage(img,avera.anim.frame*96,0,96,84,-dw/2,-dh,dw,dh);
+    ctx.drawImage(img,avera.anim.frame*96,0,96,84,-dw/2,-161,dw,dh);
   else{
     ctx.fillStyle='#223366';ctx.fillRect(-40,-dh,80,dh);
   }
@@ -3151,7 +3157,7 @@ function drawOctopa(){
   ctx.translate(sx,sy);
   if(octopa.facing>0)ctx.scale(-1,1);
   if(img?.complete&&img.naturalWidth>0)
-    ctx.drawImage(img,octopa.anim.frame*200,0,200,200,-dw/2,-dh,dw,dh);
+    ctx.drawImage(img,octopa.anim.frame*200,0,200,200,-dw/2,-230,dw,dh);
   else{ctx.fillStyle='#aa2200';ctx.fillRect(-60,-dh,120,dh);}
   ctx.restore();
   if(octopa.poundWarn){
@@ -3551,7 +3557,7 @@ function drawClasus(){
   ctx.translate(sx,sy);
   if(clasus.facing>0)ctx.scale(-1,1);
   if(img?.complete&&img.naturalWidth>0)
-    ctx.drawImage(img,clasus.anim.frame*240,0,240,240,-dw/2,-dh,dw,dh);
+    ctx.drawImage(img,clasus.anim.frame*240,0,240,240,-dw/2,-384,dw,dh);
   else{ctx.fillStyle='#220033';ctx.fillRect(-65,-dh,130,dh);}
   ctx.restore();
   if(clasus.invincible&&frameCount%6<3){
