@@ -1,4 +1,85 @@
 'use strict';
+
+// ══════════════════════════════════════════════════════
+//  MOBILE DETECTION & TOUCH CONTROLS
+// ══════════════════════════════════════════════════════
+const IS_MOBILE = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  || (navigator.maxTouchPoints > 0 && window.innerWidth < 900);
+
+// Virtual keys set by touch buttons — merged into keys{}
+const touchKeys = {};
+
+function initMobileControls() {
+  if (!IS_MOBILE) return;
+
+  document.getElementById('mobile-controls').style.display = 'flex';
+  document.getElementById('controls-hint-desktop').style.display = 'none';
+  document.getElementById('controls-hint-mobile').style.display = 'flex';
+
+  const btns = document.querySelectorAll('.dpad-btn, .action-btn');
+  btns.forEach(btn => {
+    const key = btn.dataset.key;
+
+    const press = (e) => {
+      e.preventDefault();
+      touchKeys[key] = true;
+      btn.classList.add('pressed');
+    };
+    const release = (e) => {
+      e.preventDefault();
+      touchKeys[key] = false;
+      btn.classList.remove('pressed');
+    };
+
+    btn.addEventListener('touchstart',  press,   {passive: false});
+    btn.addEventListener('touchend',    release, {passive: false});
+    btn.addEventListener('touchcancel', release, {passive: false});
+    // Also handle mouse for desktop testing
+    btn.addEventListener('mousedown',   press);
+    btn.addEventListener('mouseup',     release);
+    btn.addEventListener('mouseleave',  release);
+  });
+}
+
+// Merge touchKeys into keys each frame
+function mergeTouchKeys() {
+  Object.keys(touchKeys).forEach(k => {
+    if (touchKeys[k]) keys[k] = true;
+    else if (!touchKeys[k] && keys[k]) delete keys[k];
+  });
+}
+
+// Responsive canvas scaling
+function initResponsiveCanvas() {
+  function resize() {
+    const canvas = document.getElementById('game-canvas');
+    if (!canvas) return;
+    if (IS_MOBILE) {
+      // On mobile: canvas takes up to 58vh, rest for controls
+      const maxH = window.innerHeight * 0.58;
+      const maxW = window.innerWidth;
+      const ratio = 960 / 540;
+      let w = maxW;
+      let h = w / ratio;
+      if (h > maxH) { h = maxH; w = h * ratio; }
+      canvas.style.width  = w + 'px';
+      canvas.style.height = h + 'px';
+      canvas.style.maxHeight = '';
+    } else {
+      // Desktop: fill window maintaining aspect ratio
+      const ratio = 960 / 540;
+      let w = window.innerWidth;
+      let h = w / ratio;
+      if (h > window.innerHeight) { h = window.innerHeight; w = h * ratio; }
+      canvas.style.width  = w + 'px';
+      canvas.style.height = h + 'px';
+      canvas.style.maxHeight = '';
+    }
+  }
+  window.addEventListener('resize', resize);
+  resize();
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  OPERATION IRON PIXEL — LEVEL 1: FAULTMINE DAY (Complete)
 // ═══════════════════════════════════════════════════════════════
@@ -1014,10 +1095,12 @@ function drawHUD(){
   const stageLabel=bossActive?`⚔ BOSS: ${bossNames[currentLevel]}`:`LVL${currentLevel} STAGE ${sublevel} — ${lvlNames[currentLevel]}`;
   ctx.fillText(stageLabel,14,92);
 
-  // Controls bar
-  ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,CFG.CANVAS_H-22,CFG.CANVAS_W,22);
-  ctx.fillStyle='#88aacc';ctx.font='9px monospace';
-  ctx.fillText('← → MOVE  SHIFT RUN  ↑/Z JUMP  ↓ CROUCH  ↓+SHIFT SLIDE  X/SPACE SHOOT  C ROLL',8,CFG.CANVAS_H-7);
+  // Controls bar — desktop only
+  if(!IS_MOBILE){
+    ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,CFG.CANVAS_H-22,CFG.CANVAS_W,22);
+    ctx.fillStyle='#88aacc';ctx.font='9px monospace';
+    ctx.fillText('← → MOVE  SHIFT RUN  ↑/Z JUMP  ↓ CROUCH  ↓+SHIFT SLIDE  X/SPACE SHOOT  C ROLL',8,CFG.CANVAS_H-7);
+  }
 
   // Ammo warning
   if(player.hasGun&&player.ammo<=10&&player.ammo>0&&frameCount%20<10){
@@ -1115,7 +1198,7 @@ function drawLoadingScreen(){
 // ── MAIN LOOP ──────────────────────────────────────────────────
 function gameLoop(){
   requestAnimationFrame(gameLoop);
-  frameCount++;prevKeys={...keys};
+  frameCount++;mergeTouchKeys();prevKeys={...keys};
   ctx.clearRect(0,0,CFG.CANVAS_W,CFG.CANVAS_H);
 
   if(screen==='game'){
@@ -1218,6 +1301,8 @@ function restartGame(){
 window.addEventListener('DOMContentLoaded',()=>{
   canvas=document.getElementById('game-canvas');
   ctx=canvas.getContext('2d');
+  initMobileControls();
+  initResponsiveCanvas();
   document.getElementById('btn-naveen').addEventListener('click',()=>startGame('naveen'));
   document.getElementById('btn-radhika').addEventListener('click',()=>startGame('radhika'));
   document.getElementById('btn-restart').addEventListener('click',restartGame);
