@@ -1029,11 +1029,18 @@ function drawNote(){
 
 function drawSublevelTransition(){
   if(!sublevelTransition)return;
-  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,CFG.CANVAS_W,CFG.CANVAS_H);
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,CFG.CANVAS_W,CFG.CANVAS_H);
   ctx.fillStyle='#ffd166';ctx.font='bold 32px monospace';ctx.textAlign='center';
-  ctx.fillText(`STAGE 1-${sublevel+1}`,CFG.CANVAS_W/2,CFG.CANVAS_H/2-10);
-  ctx.fillStyle='#aac8ff';ctx.font='14px monospace';
-  ctx.fillText(sublevel===1?'The robots grow stronger...':'Something powerful waits ahead...',CFG.CANVAS_W/2,CFG.CANVAS_H/2+25);
+  if(currentLevel===1){
+    ctx.fillText(`STAGE 1-${sublevel+1}`,CFG.CANVAS_W/2,CFG.CANVAS_H/2-10);
+    ctx.fillStyle='#aac8ff';ctx.font='14px monospace';
+    ctx.fillText(sublevel===1?'The robots grow stronger...':'Something powerful waits ahead...',CFG.CANVAS_W/2,CFG.CANVAS_H/2+25);
+  } else {
+    const next=sublevel===1?'STAGE 2-2: FREE JENNY':sublevel===2?'BOSS: MAMULAUS':'';
+    ctx.fillText(next,CFG.CANVAS_W/2,CFG.CANVAS_H/2-10);
+    ctx.fillStyle='#cc88ff';ctx.font='14px monospace';
+    ctx.fillText(sublevel===1?'The Warpzone holds a prisoner...':'The guardian emerges...',CFG.CANVAS_W/2,CFG.CANVAS_H/2+25);
+  }
   ctx.textAlign='left';
 }
 
@@ -1072,10 +1079,11 @@ function drawVictory(){
   ctx.fillText('Level 2 — Wrapzone Night — Coming Next',CFG.CANVAS_W/2,CFG.CANVAS_H/2+70);
   if(victoryTimer>120&&Math.floor(victoryTimer/20)%2===0){
     ctx.fillStyle='#ffd166';ctx.font='12px monospace';
-    ctx.fillText('[ Press R to play again ]',CFG.CANVAS_W/2,CFG.CANVAS_H/2+100);
+    ctx.fillText('[ Press R to restart  |  Press N for Level 2 ]',CFG.CANVAS_W/2,CFG.CANVAS_H/2+100);
   }
   ctx.textAlign='left';
   if(keys['KeyR']&&victoryTimer>120)restartGame();
+  if(currentLevel===1&&keys['KeyN']&&victoryTimer>120)goToLevel2();
 }
 
 function drawLoadingScreen(){
@@ -1100,28 +1108,43 @@ function gameLoop(){
     updateShake();updateParticles();updateFloatTexts();updateShockwaves();
     if(!victoryScreen){
       updatePlayer();
-      updateChests();
-      if(bossActive)updateBoss();
-      else updateEnemies();
-      updateBullets();
+      if(currentLevel===1){
+        updateChests();
+        if(bossActive)updateBoss();
+        else updateEnemies();
+        updateBullets();
+      } else {
+        updateLevel2();
+        updateBulletsL2();
+      }
       if(noteVisible){noteTimer--;if(noteTimer<=0&&!victoryScreen)noteVisible=false;}
     }
     // Draw
     ctx.save();ctx.translate(camShake.x,camShake.y);
-    drawBackground();
-    drawShockwaves();
-    drawChests();
-    drawEnemies();
+    if(currentLevel===1){
+      drawBackground();
+      drawShockwaves();
+      drawChests();
+      drawEnemies();
+    } else {
+      drawWrapzoneBackground();
+      if(sublevel===2||sublevel==='boss')drawJenny();
+      if(sublevel===2)drawTerminals();
+      drawEnemies();
+    }
     drawBullets();
     drawParticles();
     drawPlayer();
-    if(bossActive)drawBoss();
+    if(currentLevel===1&&bossActive)drawBoss();
+    if(currentLevel===2&&bossActive)drawMamulaus();
     ctx.restore();
     drawFloatTexts();
+    if(currentLevel===2)drawKillCounter();
     drawHUD();
     drawNote();
     drawSublevelTransition();
-    if(bossIntro)drawBossIntro();
+    if(bossIntro&&currentLevel===1)drawBossIntro();
+    if(bossIntro&&currentLevel===2)drawMamulausIntro();
     if(victoryScreen)drawVictory();
   } else if(screen==='loading'){
     drawLoadingScreen();
@@ -1129,6 +1152,17 @@ function gameLoop(){
 }
 
 // ── START / RESTART ────────────────────────────────────────────
+function goToLevel2(){
+  victoryScreen=false;noteVisible=false;
+  screen='loading';
+  document.getElementById('select-overlay').classList.add('hidden');
+  ctx.fillStyle='#14141c';ctx.fillRect(0,0,CFG.CANVAS_W,CFG.CANVAS_H);
+  loadLevel2Assets(()=>{
+    startLevel2();
+    screen='game';
+  });
+}
+
 function startGame(charKey){
   document.getElementById('select-overlay').classList.add('hidden');
   screen='loading';
@@ -1153,3 +1187,818 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('btn-restart').addEventListener('click',restartGame);
   requestAnimationFrame(gameLoop);
 });
+
+// ═══════════════════════════════════════════════════════════════
+//  LEVEL 2 — WRAPZONE NIGHT
+// ═══════════════════════════════════════════════════════════════
+
+// ── LEVEL 2 SPRITE CONFIGS ─────────────────────────────────────
+const MAMULAUS_CFG = {
+  frameW:250, frameH:250, scale:1.5,
+  anims:{
+    idle:   {src:'sprites/mamulaus/idle.png',    frames:8, fps:7},
+    run:    {src:'sprites/mamulaus/run.png',     frames:8, fps:12},
+    attack1:{src:'sprites/mamulaus/attack1.png', frames:8, fps:12, loop:false},
+    attack2:{src:'sprites/mamulaus/attack2.png', frames:8, fps:12, loop:false},
+    hurt:   {src:'sprites/mamulaus/hurt.png',    frames:3, fps:10, loop:false},
+    death:  {src:'sprites/mamulaus/death.png',   frames:7, fps:8,  loop:false},
+    jump:   {src:'sprites/mamulaus/jump.png',    frames:2, fps:6},
+    fall:   {src:'sprites/mamulaus/fall.png',    frames:2, fps:6},
+  }
+};
+const JENNY_CFG = {
+  frameW:69, frameH:44, scale:2.8,
+  anims:{
+    idle:  {src:'sprites/jenny/idle.png',   frames:6,  fps:6},
+    dash:  {src:'sprites/jenny/dash.png',   frames:7,  fps:10},
+    attack:{src:'sprites/jenny/attack.png', frames:12, fps:12},
+    crouch:{src:'sprites/jenny/crouch.png', frames:6,  fps:6},
+    fall:  {src:'sprites/jenny/fall.png',   frames:3,  fps:8},
+    death: {src:'sprites/jenny/death.png',  frames:11, fps:8, loop:false},
+  }
+};
+
+// ── LEVEL 2 STATE ──────────────────────────────────────────────
+let currentLevel = 1;
+let wrapzoneBgs  = {};
+let wrapzoneBgLoaded = false;
+let killCount    = 0;
+const KILL_TARGET = 50;
+let waveTimer    = 0;
+let waveInterval = 300; // frames between waves
+let totalSpawned = 0;
+let waveNumber   = 0;
+
+// Jenny puzzle state
+let jennyFreed    = false;
+let jennyAnim     = {name:'idle', frame:0, timer:0};
+let jennyX        = 0;
+let jennyDialogue = false;
+let jennyDialogueTimer = 0;
+let jennyDialogueLine  = 0;
+const JENNY_LINES = [
+  '"Finally... I thought no one would come."',
+  '"The robots... they took everyone. Your family too."',
+  '"I know where they are being held. Follow me."',
+  '"Robo-trap-izon built a prison in Akustus Kisemo."',
+  '"But first we have to get through the Wrapzone..."',
+];
+
+// Terminals for puzzle
+let terminals = [];
+let terminalsSolved = 0;
+
+// Mamulaus boss
+let mamulaus = null;
+
+// ── LOAD LEVEL 2 ASSETS ────────────────────────────────────────
+function loadLevel2Assets(cb){
+  let loaded = 0;
+  const check = () => { if(++loaded >= 3) cb(); };
+
+  // Wrapzone backgrounds
+  wrapzoneBgs = {};
+  const wBgs = {plx1:'backgrounds/wrapzone/plx1.png', plx2:'backgrounds/wrapzone/plx2.png',
+    plx3:'backgrounds/wrapzone/plx3.png', plx4:'backgrounds/wrapzone/plx4.png',
+    plx5:'backgrounds/wrapzone/plx5.png'};
+  let wn = 0, wtotal = Object.keys(wBgs).length;
+  Object.entries(wBgs).forEach(([k,src])=>{
+    const img = new Image();
+    img.onload = img.onerror = () => { wrapzoneBgs[k]=img; if(++wn===wtotal) check(); };
+    img.src = src;
+  });
+
+  // Mamulaus
+  images.mamulaus = {};
+  const mks = Object.keys(MAMULAUS_CFG.anims); let mn=0;
+  mks.forEach(k=>{
+    const img=new Image();
+    img.onload=img.onerror=()=>{ if(++mn===mks.length) check(); };
+    img.src=MAMULAUS_CFG.anims[k].src; images.mamulaus[k]=img;
+  });
+
+  // Jenny
+  images.jenny = {};
+  const jks = Object.keys(JENNY_CFG.anims); let jn=0;
+  jks.forEach(k=>{
+    const img=new Image();
+    img.onload=img.onerror=()=>{ if(++jn===jks.length) check(); };
+    img.src=JENNY_CFG.anims[k].src; images.jenny[k]=img;
+  });
+}
+
+// ── START LEVEL 2 ──────────────────────────────────────────────
+function startLevel2(){
+  currentLevel = 2;
+  bullets=[]; enemyBullets=[]; enemies=[]; particles=[];
+  chests=[]; floatTexts=[]; shockwaves=[];
+  shootTimer=0; sublevel=1; levelComplete=false;
+  sublevelTransition=false; bossActive=false;
+  bossIntro=false; mamulaus=null; victoryScreen=false;
+  noteVisible=false; killCount=0; totalSpawned=0;
+  waveTimer=0; waveNumber=0;
+  jennyFreed=false; jennyDialogue=false;
+  terminals=[]; terminalsSolved=0;
+  player.x=180; player.y=CFG.GROUND_Y;
+  player.vx=0; player.vy=0; player.facing=1;
+  camera.x=0;
+
+  showNote('LEVEL 2 — WRAPZONE NIGHT',
+    'The warp has corrupted everything. Robots close in from all sides.',120);
+
+  // Spawn first wave after note
+  setTimeout(()=>{ spawnWave(); }, 2500);
+}
+
+// ── WAVE SPAWNER (front & back) ────────────────────────────────
+function spawnWave(){
+  if(killCount >= KILL_TARGET) return;
+  waveNumber++;
+  const waveSize = Math.min(8, 4 + Math.floor(waveNumber/2));
+  const half = Math.ceil(waveSize/2);
+
+  // Spawn from RIGHT (front)
+  for(let i=0;i<half;i++){
+    const x = player.x + 500 + i*180 + Math.random()*100;
+    spawnWarpSoldier(Math.min(x, CFG.LEVEL_W-100), -1);
+  }
+  // Spawn from LEFT (back)
+  for(let i=0;i<waveSize-half;i++){
+    const x = player.x - 400 - i*180 - Math.random()*100;
+    spawnWarpSoldier(Math.max(x, 100), 1);
+  }
+  totalSpawned += waveSize;
+  floatText(player.x, player.y-100,
+    `WAVE ${waveNumber}! ${waveSize} ROBOTS!`,'#ff4444',15);
+  shake(4,6);
+}
+
+function spawnWarpSoldier(x, facing){
+  enemies.push({
+    x, y:CFG.GROUND_Y, vx:0, vy:0,
+    facing, hp:30, maxHp:30,
+    state:'chase',
+    anim:{name:'walk', frame:0, timer:0},
+    attackCd:0, hurtTimer:0, shootCd:80+Math.random()*40|0,
+    dead:false, deathDone:false, deathParticlesDone:false,
+    alertRange:9999, attackRange:170, // always chase
+    isShadow: waveNumber > 4, // later waves are shadow variants (faster)
+  });
+}
+
+// ── TERMINALS SPAWN (sublevel 2) ───────────────────────────────
+function spawnTerminals(){
+  terminals = [
+    {x:600,  y:CFG.GROUND_Y, solved:false, active:false,
+     sequence:['ArrowLeft','ArrowLeft','ArrowRight'],
+     progress:0, inputTimer:0, inputWindow:240,
+     failFlash:0, shakeTimer:0, label:'TERMINAL A'},
+    {x:1500, y:CFG.GROUND_Y, solved:false, active:false,
+     sequence:['ArrowUp','ArrowDown','ArrowUp'],
+     progress:0, inputTimer:0, inputWindow:240,
+     failFlash:0, shakeTimer:0, label:'TERMINAL B'},
+    {x:2600, y:CFG.GROUND_Y, solved:false, active:false,
+     sequence:['ArrowUp','ArrowUp','ArrowLeft','ArrowRight'],
+     progress:0, inputTimer:0, inputWindow:240,
+     failFlash:0, shakeTimer:0, label:'TERMINAL C'},
+  ];
+  terminalsSolved = 0;
+  jennyX = 3200;
+  jennyFreed = false;
+  jennyDialogue = false;
+  enemies = []; // clear any lingering enemies
+  // A few guard soldiers near Jenny's cage
+  spawnWarpSoldier(900,  -1);
+  spawnWarpSoldier(1200,  1);
+  spawnWarpSoldier(2000, -1);
+  spawnWarpSoldier(2300,  1);
+  spawnWarpSoldier(3000, -1);
+  showNote('FREE JENNY!',
+    'Solve 3 terminals to unlock her cage. Approach each terminal to activate.',160);
+}
+
+// ── TERMINAL INPUT ─────────────────────────────────────────────
+function handleTerminalInput(code){
+  if(currentLevel!==2||sublevel!==2) return;
+  for(const t of terminals){
+    if(!t.active||t.solved) continue;
+    const exp = t.sequence[t.progress];
+    if(code===exp){
+      t.progress++;
+      t.inputTimer=t.inputWindow;
+      shake(2,3);
+      if(t.progress>=t.sequence.length){
+        t.solved=true; t.active=false;
+        terminalsSolved++;
+        floatText(t.x,t.y-80,`${t.label} SOLVED!`,'#00ff88',14);
+        spawnParticles(t.x,t.y-40,'#00ff88',12);
+        shake(5,8);
+        if(terminalsSolved>=3){
+          // All solved — free Jenny!
+          setTimeout(()=>{
+            jennyFreed=true;
+            showNote('JENNY IS FREE!','"Thank you... now listen carefully."',180);
+            spawnParticles(jennyX,CFG.GROUND_Y-60,'#ffd166',20,1.5);
+            shake(8,15);
+            setTimeout(()=>{ jennyDialogue=true; jennyDialogueLine=0; jennyDialogueTimer=200; },2500);
+          },1000);
+        }
+      }
+    } else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(code)){
+      t.progress=0; t.failFlash=60; t.shakeTimer=20;
+      floatText(t.x,t.y-80,'WRONG!','#ff4444');
+      shake(3,5);
+    }
+    break;
+  }
+}
+
+// ── MAMULAUS INIT ──────────────────────────────────────────────
+function initMamulaus(){
+  bossActive=true; bossIntro=true; bossIntroTimer=200;
+  mamulaus={
+    x:800, y:CFG.GROUND_Y, vx:0, vy:0, facing:-1,
+    hp:150, maxHp:150, phase:1,
+    anim:{name:'idle',frame:0,timer:0},
+    onGround:true, floatY:0, floatDir:1,
+    shootCd:70, attackCd:100,
+    shielded:false, shieldCd:260, shieldTimer:0, shieldDur:80,
+    stunned:false, stunTimer:0,
+    teleportCd:300, teleportWarn:false, teleportWarnTimer:0,
+    orbPattern:0, // 0=single, 1=spread, 2=spiral
+    dead:false, deathTimer:0, deathDone:false,
+  };
+}
+
+function updateMamulaus(){
+  if(!mamulaus||mamulaus.deathDone) return;
+  if(bossIntro){ bossIntroTimer--; if(bossIntroTimer<=0) bossIntro=false; return; }
+  if(mamulaus.dead){
+    mamulaus.deathTimer++;
+    tickAnim(mamulaus.anim,MAMULAUS_CFG.anims);
+    if(mamulaus.anim.frame>=6&&mamulaus.anim.name==='death'){
+      mamulaus.deathDone=true;
+      victoryScreen=true;
+      showNote('MAMULAUS DEFEATED!','Jenny: "We are close. Stay strong, Superboy."',999);
+      spawnParticles(mamulaus.x,mamulaus.y-80,'#cc44ff',30,2);
+      shake(15,30);
+    }
+    return;
+  }
+
+  // Phase 2 at 50%
+  if(mamulaus.hp<=mamulaus.maxHp*0.5&&mamulaus.phase===1){
+    mamulaus.phase=2;
+    showNote('MAMULAUS — PHASE 2!','Magic orbs multiply. Watch the patterns!',130);
+    mamulaus.orbPattern=1;
+    spawnParticles(mamulaus.x,mamulaus.y-100,'#cc44ff',20,1.5);
+    shake(12,25);
+  }
+
+  const dx = player.x - mamulaus.x;
+  mamulaus.facing = dx>0?-1:1;
+  const spd = mamulaus.phase===2?2.8:1.8;
+
+  // Levitation — floats up and down
+  mamulaus.floatY += mamulaus.floatDir*0.8;
+  if(mamulaus.floatY>18||mamulaus.floatY<-18) mamulaus.floatDir*=-1;
+
+  // Shield mechanic
+  if(!mamulaus.shielded&&!mamulaus.stunned){
+    mamulaus.shieldCd--;
+    if(mamulaus.shieldCd<=0){
+      mamulaus.shielded=true; mamulaus.shieldTimer=mamulaus.shieldDur;
+      mamulaus.shieldCd=280;
+      setAnim(mamulaus.anim,'attack2');
+      floatText(mamulaus.x,mamulaus.y-220,'MAGIC SHIELD!','#cc44ff',16);
+      shake(4,8);
+    }
+  }
+  if(mamulaus.shielded){
+    mamulaus.shieldTimer--;
+    if(mamulaus.shieldTimer<=0){
+      mamulaus.shielded=false; mamulaus.stunned=true; mamulaus.stunTimer=70;
+      setAnim(mamulaus.anim,'hurt');
+      floatText(mamulaus.x,mamulaus.y-220,'STUNNED! HIT NOW!','#ffff00',16);
+      shake(6,10);
+    }
+  }
+  if(mamulaus.stunned){
+    mamulaus.stunTimer--;
+    if(mamulaus.stunTimer<=0) mamulaus.stunned=false;
+  }
+
+  // Teleport (phase 2)
+  if(mamulaus.phase===2&&!mamulaus.teleportWarn&&!mamulaus.shielded){
+    mamulaus.teleportCd--;
+    if(mamulaus.teleportCd<=0){
+      mamulaus.teleportWarn=true; mamulaus.teleportWarnTimer=50;
+      mamulaus.teleportCd=280;
+      floatText(mamulaus.x,mamulaus.y-220,'WARP!','#cc44ff',16);
+    }
+  }
+  if(mamulaus.teleportWarn){
+    mamulaus.teleportWarnTimer--;
+    if(mamulaus.teleportWarnTimer<=0){
+      mamulaus.teleportWarn=false;
+      mamulaus.x = player.x+(dx>0?-220:220);
+      mamulaus.x = Math.max(200,Math.min(CFG.LEVEL_W-200,mamulaus.x));
+      spawnParticles(mamulaus.x,mamulaus.y-80,'#cc44ff',18);
+      shake(5,8);
+    }
+  }
+
+  // Movement (floats toward player)
+  if(!mamulaus.stunned&&!mamulaus.shielded)
+    mamulaus.x += dx>0?spd:-spd;
+  mamulaus.x = Math.max(180,Math.min(CFG.LEVEL_W-180,mamulaus.x));
+
+  // Shoot magic orbs
+  if(!mamulaus.shielded&&!mamulaus.stunned){
+    mamulaus.shootCd--;
+    if(mamulaus.shootCd<=0){
+      mamulaus.shootCd = mamulaus.phase===2?40:65;
+      const dir = dx>0?1:-1;
+      const oy = mamulaus.y-130+mamulaus.floatY;
+
+      if(mamulaus.orbPattern===0){
+        // Single orb
+        enemyBullets.push({x:mamulaus.x+dir*50,y:oy,vx:dir*7,vy:0,alive:true,boss:true,orb:true,color:'#cc44ff'});
+      } else if(mamulaus.orbPattern===1){
+        // 3-way spread
+        enemyBullets.push({x:mamulaus.x+dir*50,y:oy,vx:dir*7,vy:0,   alive:true,boss:true,orb:true,color:'#cc44ff'});
+        enemyBullets.push({x:mamulaus.x+dir*50,y:oy,vx:dir*6,vy:-2.5,alive:true,boss:true,orb:true,color:'#ff44cc'});
+        enemyBullets.push({x:mamulaus.x+dir*50,y:oy,vx:dir*6,vy:2.5, alive:true,boss:true,orb:true,color:'#ff44cc'});
+      }
+      if(mamulaus.anim.name!=='hurt') setAnim(mamulaus.anim,'attack1');
+    }
+  }
+
+  // Anim fallback
+  if(!['attack1','attack2','hurt','death'].includes(mamulaus.anim.name))
+    setAnim(mamulaus.anim,Math.abs(dx)>80?'run':'idle');
+  tickAnim(mamulaus.anim,MAMULAUS_CFG.anims);
+
+  // Contact damage
+  if(player.invincible===0&&!player.dead){
+    if(Math.abs(mamulaus.x-player.x)<60&&Math.abs((mamulaus.y+mamulaus.floatY)-player.y)<130)
+      hurtPlayer(mamulaus.stunned?4:12);
+  }
+}
+
+// ── LEVEL 2 UPDATE ─────────────────────────────────────────────
+function updateLevel2(){
+  if(sublevel===1){
+    updateWaveMode();
+  } else if(sublevel===2){
+    updatePuzzleMode();
+    if(jennyDialogue) updateJennyDialogue();
+  } else if(sublevel==='boss'){
+    updateMamulaus();
+  }
+}
+
+function updateWaveMode(){
+  if(sublevelTransition) return;
+
+  // Wave spawn timer
+  waveTimer++;
+  if(waveTimer>=waveInterval&&killCount<KILL_TARGET&&enemies.filter(e=>!e.dead).length<10){
+    waveTimer=0;
+    waveInterval=Math.max(180,280-waveNumber*15);
+    spawnWave();
+  }
+
+  // Update enemies
+  for(const e of enemies){
+    if(e.dead){
+      tickAnim(e.anim,SOLDIER_CFG.anims);
+      if(e.anim.name==='death'&&e.anim.frame>=SOLDIER_CFG.anims.death.frames-1){
+        if(!e.deathParticlesDone){
+          e.deathParticlesDone=true;
+          spawnParticles(e.x,e.y-50,'#ffaa00',6);
+        }
+        e.deathDone=true;
+      }
+      continue;
+    }
+    const dx=player.x-e.x;
+    e.facing=dx>0?1:-1;
+    const spd=e.isShadow?2.6:1.9;
+
+    if(e.hurtTimer>0){e.hurtTimer--;setAnim(e.anim,'hurt');}
+    else if(Math.abs(dx)<e.attackRange){
+      e.vx=0;setAnim(e.anim,'attack');
+      if(e.shootCd>0)e.shootCd--;
+      else{
+        e.shootCd=e.isShadow?65:90;
+        enemyBullets.push({x:e.x+e.facing*20,y:e.y-55,vx:e.facing*7,vy:0,alive:true,boss:false});
+      }
+    } else {
+      e.vx=e.facing*spd;setAnim(e.anim,'walk');
+    }
+    e.x+=e.vx;
+    e.x=Math.max(50,Math.min(CFG.LEVEL_W-50,e.x));
+    tickAnim(e.anim,SOLDIER_CFG.anims);
+
+    if(player.invincible===0&&!player.dead){
+      if(Math.abs(e.x-player.x)<32&&Math.abs(e.y-player.y)<80) hurtPlayer(8);
+    }
+  }
+
+  // Check wave completion
+  if(killCount>=KILL_TARGET&&!levelComplete){
+    levelComplete=true;
+    sublevelTransition=true;
+    showNote('50 ROBOTS DOWN!','Pushing forward into the Wrapzone...',150);
+    setTimeout(()=>{
+      sublevel=2;sublevelTransition=false;levelComplete=false;
+      spawnTerminals();
+    },3000);
+  }
+}
+
+function updatePuzzleMode(){
+  if(sublevelTransition) return;
+
+  // Update guard enemies
+  for(const e of enemies){
+    if(e.dead){
+      tickAnim(e.anim,SOLDIER_CFG.anims);
+      if(e.anim.name==='death'&&e.anim.frame>=SOLDIER_CFG.anims.death.frames-1)e.deathDone=true;
+      continue;
+    }
+    const dx=player.x-e.x;
+    e.facing=dx>0?1:-1;
+    if(e.hurtTimer>0){e.hurtTimer--;setAnim(e.anim,'hurt');}
+    else if(Math.abs(dx)<170){e.vx=0;setAnim(e.anim,'attack');
+      if(e.shootCd>0)e.shootCd--;
+      else{e.shootCd=90;enemyBullets.push({x:e.x+e.facing*20,y:e.y-55,vx:e.facing*6,vy:0,alive:true,boss:false});}
+    } else {e.vx=e.facing*2;setAnim(e.anim,'walk');}
+    e.x+=e.vx;
+    tickAnim(e.anim,SOLDIER_CFG.anims);
+    if(player.invincible===0&&!player.dead){
+      if(Math.abs(e.x-player.x)<32&&Math.abs(e.y-player.y)<80) hurtPlayer(8);
+    }
+  }
+
+  // Update terminals
+  for(const t of terminals){
+    if(t.solved) continue;
+    const dist=Math.abs(player.x-t.x);
+    if(dist<120&&!t.active&&!t.solved){t.active=true;t.progress=0;t.inputTimer=t.inputWindow;}
+    if(t.active){
+      t.inputTimer--;
+      if(t.inputTimer<=0){t.active=false;t.progress=0;t.failFlash=60;t.shakeTimer=20;
+        floatText(t.x,t.y-80,'TIMEOUT!','#ff8800');}
+    }
+    if(t.shakeTimer>0)t.shakeTimer--;
+    if(t.failFlash>0)t.failFlash--;
+  }
+
+  // Trigger boss after jenny dialogue ends
+  if(jennyFreed&&!jennyDialogue&&jennyDialogueLine>=JENNY_LINES.length&&!bossActive&&!levelComplete){
+    levelComplete=true;
+    sublevelTransition=true;
+    setTimeout(()=>{
+      sublevel='boss';sublevelTransition=false;initMamulaus();
+    },1500);
+  }
+}
+
+function updateJennyDialogue(){
+  jennyDialogueTimer--;
+  tickAnim(jennyAnim,JENNY_CFG.anims);
+  if(jennyDialogueTimer<=0){
+    jennyDialogueLine++;
+    jennyDialogueTimer=200;
+    if(jennyDialogueLine>=JENNY_LINES.length){
+      jennyDialogue=false;
+      showNote('MAMULAUS APPROACHES!','"The Warpzone guardian. Kill it!"',150);
+    }
+  }
+}
+
+// ── LEVEL 2 BULLET HITS ────────────────────────────────────────
+function updateBulletsL2(){
+  for(const b of bullets){
+    if(!b.alive)continue;
+    b.x+=b.vx;b.y+=b.vy;
+    if(b.x<camera.x-150||b.x>camera.x+CFG.CANVAS_W+150){b.alive=false;continue;}
+
+    // Hit Mamulaus
+    if(bossActive&&mamulaus&&!mamulaus.dead){
+      if(Math.abs(b.x-mamulaus.x)<80&&Math.abs(b.y-(mamulaus.y+mamulaus.floatY-130))<110){
+        if(mamulaus.shielded){
+          b.alive=false;
+          spawnParticles(mamulaus.x,mamulaus.y-130,'#cc44ff',4);
+          floatText(mamulaus.x,mamulaus.y-200,'BLOCKED!','#cc44ff',12);
+        } else {
+          const dmg=mamulaus.stunned?22:10;
+          mamulaus.hp-=dmg;b.alive=false;
+          spawnParticles(mamulaus.x,mamulaus.y-130,'#cc44ff',5);
+          floatText(mamulaus.x,mamulaus.y-200,mamulaus.stunned?`-${dmg} BONUS!`:`-${dmg}`,'#ff44ff',12);
+          player.score+=dmg;shake(3,5);
+          if(!mamulaus.stunned)setAnim(mamulaus.anim,'hurt');
+          if(mamulaus.hp<=0){mamulaus.hp=0;mamulaus.dead=true;setAnim(mamulaus.anim,'death');}
+        }
+        continue;
+      }
+    }
+
+    // Hit enemies
+    for(const e of enemies){
+      if(e.dead)continue;
+      if(Math.abs(b.x-e.x)<28&&Math.abs(b.y-(e.y-55))<45){
+        e.hp-=10;b.alive=false;
+        spawnParticles(e.x,e.y-55,'#ff5522',4);
+        if(e.hp<=0){
+          e.dead=true;setAnim(e.anim,'death');
+          if(sublevel===1){
+            killCount++;player.score+=150;
+            floatText(e.x,e.y-90,'+150','#ffd166');
+            shake(2,3);
+          } else {
+            player.score+=100;floatText(e.x,e.y-90,'+100','#ffd166');
+          }
+        } else {setAnim(e.anim,'hurt');e.hurtTimer=18;}
+        break;
+      }
+    }
+  }
+  bullets=bullets.filter(b=>b.alive);
+
+  for(const b of enemyBullets){
+    if(!b.alive)continue;
+    b.x+=b.vx;b.y+=b.vy;
+    if(b.x<camera.x-150||b.x>camera.x+CFG.CANVAS_W+150){b.alive=false;continue;}
+    if(player.invincible===0&&!player.dead){
+      if(Math.abs(b.x-player.x)<22&&Math.abs(b.y-(player.y-50))<42){
+        b.alive=false;hurtPlayer(b.boss?10:6);
+      }
+    }
+  }
+  enemyBullets=enemyBullets.filter(b=>b.alive);
+}
+
+// ── DRAW WRAPZONE BACKGROUND ───────────────────────────────────
+function drawWrapzoneBackground(){
+  const W=CFG.CANVAS_W,H=CFG.CANVAS_H,GY=CFG.GROUND_Y;
+
+  // Night sky
+  const sky=ctx.createLinearGradient(0,0,0,GY);
+  sky.addColorStop(0,'#05050f');sky.addColorStop(0.5,'#0a0a20');sky.addColorStop(1,'#151530');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+  // Stars
+  for(let i=0;i<80;i++){
+    const sx=((i*137+frameCount*0.02)%W);
+    const sy=((i*79)%(GY-40));
+    const br=Math.sin(frameCount*0.05+i)*0.4+0.6;
+    ctx.globalAlpha=br*0.8;
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(sx,sy,1.5,1.5);
+  }
+  ctx.globalAlpha=1;
+
+  // Parallax layers
+  const layers=[
+    {key:'plx1',spd:0.04,tint:'rgba(30,0,60,0.3)'},
+    {key:'plx2',spd:0.1, tint:'rgba(20,0,40,0.2)'},
+    {key:'plx3',spd:0.2, tint:'rgba(10,0,30,0.1)'},
+    {key:'plx4',spd:0.4, tint:null},
+    {key:'plx5',spd:0.7, tint:null},
+  ];
+  for(const {key,spd,tint} of layers){
+    const img=wrapzoneBgs[key];
+    if(!img||!img.naturalWidth) continue;
+    const pw=img.width,ph=img.height;
+    const px=(camera.x*spd)%pw;
+    for(let ox=-px;ox<W+pw;ox+=pw)
+      ctx.drawImage(img,ox,GY-ph,pw,ph);
+    if(tint){ctx.fillStyle=tint;ctx.fillRect(0,GY-300,W,300);}
+  }
+
+  // Ground
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,GY,W,H-GY);
+  ctx.fillStyle='#1a0a3a';ctx.fillRect(0,GY,W,8);
+  ctx.fillStyle='#2a1050';ctx.fillRect(0,GY,W,3);
+
+  // Warp effect: purple glow lines
+  if(frameCount%3===0){
+    ctx.strokeStyle=`rgba(150,50,255,${Math.random()*0.15})`;
+    ctx.lineWidth=1;
+    for(let i=0;i<3;i++){
+      const lx=Math.random()*W;
+      ctx.beginPath();ctx.moveTo(lx,0);ctx.lineTo(lx+Math.random()*40-20,H);ctx.stroke();
+    }
+  }
+
+  // Night overlay
+  ctx.fillStyle='rgba(0,0,20,0.25)';ctx.fillRect(0,0,W,H);
+}
+
+// ── DRAW TERMINALS ─────────────────────────────────────────────
+function drawTerminals(){
+  for(const t of terminals){
+    if(t.solved){
+      // Solved terminal — green glow
+      const sx=t.x-camera.x;
+      ctx.save();ctx.shadowColor='#00ff88';ctx.shadowBlur=20;
+      ctx.fillStyle='#004400';ctx.fillRect(sx-20,t.y-70,40,70);
+      ctx.fillStyle='#00ff88';ctx.fillRect(sx-20,t.y-75,40,8);
+      ctx.restore();
+      ctx.fillStyle='#00ff88';ctx.font='bold 16px monospace';ctx.textAlign='center';
+      ctx.fillText('✓',sx,t.y-38);ctx.textAlign='left';
+      continue;
+    }
+
+    const sx=t.x-camera.x+(t.shakeTimer>0?(Math.random()*6-3):0);
+    const pulse=Math.sin(frameCount*0.08)*0.4+0.6;
+
+    ctx.save();
+    ctx.shadowColor='#9933ff';ctx.shadowBlur=15*pulse;
+    ctx.fillStyle='#1a0033';ctx.fillRect(sx-22,t.y-75,44,75);
+    ctx.fillStyle='#330066';ctx.fillRect(sx-22,t.y-80,44,8);
+    ctx.restore();
+
+    // Screen
+    ctx.fillStyle='rgba(100,0,200,0.5)';ctx.fillRect(sx-16,t.y-68,32,30);
+    ctx.fillStyle='#cc44ff';ctx.font='bold 9px monospace';ctx.textAlign='center';
+    ctx.fillText(t.label,sx,t.y-52);
+
+    // Prompt when active
+    if(t.active&&!t.solved){
+      ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(sx-80,t.y-145,160,65);
+      ctx.strokeStyle='#9933ff';ctx.lineWidth=1.5;ctx.strokeRect(sx-80,t.y-145,160,65);
+      ctx.fillStyle='#cc44ff';ctx.font='bold 9px monospace';
+      ctx.fillText('ENTER SEQUENCE:',sx,t.y-130);
+      const arrows={'ArrowLeft':'←','ArrowRight':'→','ArrowUp':'↑','ArrowDown':'↓'};
+      const sym=t.sequence.map(k=>arrows[k]||k);
+      ctx.font='bold 18px monospace';
+      sym.forEach((s,i)=>{
+        ctx.fillStyle=i<t.progress?'#00ff88':i===t.progress?'#ffff00':'#555';
+        ctx.fillText(s,sx-((sym.length-1)*14)+i*28,t.y-108);
+      });
+      // Timer bar
+      ctx.fillStyle='#222';ctx.fillRect(sx-60,t.y-97,120,7);
+      const tc=t.inputTimer/t.inputWindow;
+      ctx.fillStyle=tc>0.4?'#9933ff':'#ff6600';
+      ctx.fillRect(sx-60,t.y-97,120*tc,7);
+    }
+
+    if(t.failFlash>0){ctx.fillStyle=`rgba(255,0,0,${t.failFlash/60*0.35})`;ctx.fillRect(sx-26,t.y-82,52,82);}
+
+    // Label
+    ctx.fillStyle='#cc44ff';ctx.font='9px monospace';ctx.textAlign='center';
+    ctx.fillText(t.label,sx,t.y+14);
+    ctx.textAlign='left';
+  }
+}
+
+// ── DRAW JENNY ─────────────────────────────────────────────────
+function drawJenny(){
+  const sx=jennyX-camera.x;
+  if(sx<-120||sx>CFG.CANVAS_W+120) return;
+
+  if(!jennyFreed){
+    // Draw cage
+    ctx.save();
+    ctx.strokeStyle='rgba(150,50,255,0.9)';ctx.lineWidth=3;
+    // Vertical bars
+    for(let i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(sx+i*12,CFG.GROUND_Y-120);ctx.lineTo(sx+i*12,CFG.GROUND_Y);ctx.stroke();}
+    // Horizontal bars
+    ctx.strokeStyle='rgba(100,30,200,0.7)';ctx.lineWidth=2;
+    for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(sx-36,CFG.GROUND_Y-30*i-30);ctx.lineTo(sx+36,CFG.GROUND_Y-30*i-30);ctx.stroke();}
+    // Glow
+    ctx.shadowColor='#cc44ff';ctx.shadowBlur=25;
+    ctx.strokeStyle='rgba(200,100,255,0.5)';ctx.lineWidth=6;
+    ctx.strokeRect(sx-36,CFG.GROUND_Y-120,72,120);
+    ctx.restore();
+
+    // Jenny sprite in cage
+    tickAnim(jennyAnim,JENNY_CFG.anims);
+  } else {
+    setAnim(jennyAnim,'idle');
+    tickAnim(jennyAnim,JENNY_CFG.anims);
+  }
+
+  // Draw Jenny
+  const img=images.jenny?.[jennyAnim.name];
+  const dw=JENNY_CFG.frameW*JENNY_CFG.scale,dh=JENNY_CFG.frameH*JENNY_CFG.scale;
+  ctx.save();ctx.translate(sx,CFG.GROUND_Y);
+  if(img?.complete&&img.naturalWidth>0)
+    ctx.drawImage(img,jennyAnim.frame*JENNY_CFG.frameW,0,JENNY_CFG.frameW,JENNY_CFG.frameH,-dw/2,-dh,dw,dh);
+  else{
+    ctx.fillStyle='#ff74c6';ctx.fillRect(-16,-70,32,70);
+    ctx.fillStyle='#ffddee';ctx.fillRect(-10,-82,20,14);
+  }
+  ctx.restore();
+
+  // Dialogue bubble
+  if(jennyDialogue&&jennyDialogueLine<JENNY_LINES.length){
+    const line=JENNY_LINES[jennyDialogueLine];
+    const bw=Math.max(260,line.length*8+40);
+    ctx.fillStyle='rgba(0,0,0,0.88)';ctx.fillRect(sx-bw/2,CFG.GROUND_Y-160,bw,52);
+    ctx.strokeStyle='#ff74c6';ctx.lineWidth=2;ctx.strokeRect(sx-bw/2,CFG.GROUND_Y-160,bw,52);
+    ctx.fillStyle='#ff74c6';ctx.font='bold 9px monospace';ctx.textAlign='center';
+    ctx.fillText('JENNY',sx,CFG.GROUND_Y-144);
+    ctx.fillStyle='#ffffff';ctx.font='10px monospace';
+    ctx.fillText(line,sx,CFG.GROUND_Y-122);
+    // Progress dots
+    for(let i=0;i<JENNY_LINES.length;i++){
+      ctx.fillStyle=i<=jennyDialogueLine?'#ff74c6':'#333';
+      ctx.beginPath();ctx.arc(sx-20+i*10,CFG.GROUND_Y-114,3,0,Math.PI*2);ctx.fill();
+    }
+    ctx.textAlign='left';
+  }
+}
+
+// ── DRAW MAMULAUS ──────────────────────────────────────────────
+function drawMamulaus(){
+  if(!mamulaus||mamulaus.deathDone) return;
+  const sx=mamulaus.x-camera.x;
+  const sy=mamulaus.y+mamulaus.floatY;
+  const SCALE=1.5;
+  const dw=250*SCALE,dh=250*SCALE;
+  const img=images.mamulaus?.[mamulaus.anim.name];
+
+  ctx.save();
+  if(mamulaus.shielded){ctx.shadowColor='#cc44ff';ctx.shadowBlur=40;}
+  else if(mamulaus.stunned){ctx.shadowColor='#ffff00';ctx.shadowBlur=25;}
+  else if(mamulaus.phase===2){ctx.shadowColor='#ff00cc';ctx.shadowBlur=20;}
+  ctx.translate(sx,sy);
+  if(mamulaus.facing>0)ctx.scale(-1,1);
+  if(img?.complete&&img.naturalWidth>0)
+    ctx.drawImage(img,mamulaus.anim.frame*250,0,250,250,-dw/2,-dh,dw,dh);
+  else{
+    ctx.fillStyle='#440088';ctx.fillRect(-50,-dh,100,dh);
+    ctx.fillStyle='#cc44ff';ctx.fillRect(-30,-dh-20,60,22);
+  }
+  ctx.restore();
+
+  // Shield ring
+  if(mamulaus.shielded){
+    const pulse=Math.sin(frameCount*0.15)*15;
+    ctx.save();ctx.strokeStyle='rgba(200,100,255,0.7)';ctx.lineWidth=4;
+    ctx.beginPath();ctx.arc(sx,sy-dh*0.5,90+pulse,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  }
+  if(mamulaus.stunned&&frameCount%8<4){
+    ctx.fillStyle='#ffff00';ctx.font='18px monospace';ctx.textAlign='center';
+    ctx.fillText('★★★',sx,sy-dh-8);ctx.textAlign='left';
+  }
+
+  // Boss HP bar
+  const bx=160,by=20,bw=640,bh=22;
+  ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(bx-6,by-6,bw+12,bh+12);
+  ctx.strokeStyle='#cc44ff';ctx.lineWidth=2;ctx.strokeRect(bx-6,by-6,bw+12,bh+12);
+  ctx.fillStyle='#1a0033';ctx.fillRect(bx,by,bw,bh);
+  const pct=mamulaus.hp/mamulaus.maxHp;
+  ctx.fillStyle=pct>0.5?'#cc44ff':pct>0.25?'#ff44ff':'#ff88ff';
+  ctx.fillRect(bx,by,bw*pct,bh);
+  if(mamulaus.shielded){ctx.fillStyle='rgba(200,150,255,0.4)';ctx.fillRect(bx,by,bw,bh);}
+  ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';
+  const ms=mamulaus.shielded?'🛡 SHIELDED':mamulaus.stunned?'⚡ STUNNED!':mamulaus.phase===2?'⚠ PHASE 2':'';
+  ctx.fillText(`MAMULAUS  ${mamulaus.hp}/${mamulaus.maxHp}  ${ms}`,bx+bw/2,by+16);
+  ctx.textAlign='left';
+}
+
+// ── DRAW KILL COUNTER (sublevel 1 only) ────────────────────────
+function drawKillCounter(){
+  if(currentLevel!==2||sublevel!==1) return;
+  const pct=killCount/KILL_TARGET;
+  const bx=CFG.CANVAS_W-260,by=8,bw=248,bh=18;
+  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(bx-4,by-4,bw+8,bh+26);
+  ctx.strokeStyle='#ff4444';ctx.lineWidth=1.5;ctx.strokeRect(bx-4,by-4,bw+8,bh+26);
+  ctx.fillStyle='#222';ctx.fillRect(bx,by,bw,bh);
+  ctx.fillStyle=pct<0.5?'#ff4444':pct<0.8?'#ff8800':'#00ff88';
+  ctx.fillRect(bx,by,bw*pct,bh);
+  ctx.fillStyle='#fff';ctx.font='bold 10px monospace';ctx.textAlign='center';
+  ctx.fillText(`ROBOTS KILLED: ${killCount} / ${KILL_TARGET}`,bx+bw/2,by+13);
+  if(enemies.filter(e=>!e.dead).length===0&&killCount<KILL_TARGET){
+    if(frameCount%30<15){ctx.fillStyle='#ffff00';ctx.font='bold 10px monospace';
+    ctx.fillText('MORE INCOMING...',bx+bw/2,by+27);}
+  }
+  ctx.textAlign='left';
+}
+
+// ── DRAW BOSS INTRO (mamulaus) ─────────────────────────────────
+function drawMamulausIntro(){
+  if(!bossIntro||!mamulaus) return;
+  const a=Math.min(1,bossIntroTimer/60)*0.88;
+  ctx.fillStyle=`rgba(0,0,20,${a})`;ctx.fillRect(0,0,CFG.CANVAS_W,CFG.CANVAS_H);
+  ctx.save();ctx.shadowColor='#cc44ff';ctx.shadowBlur=40;
+  ctx.fillStyle=`rgba(200,80,255,${a})`;ctx.font='bold 50px monospace';ctx.textAlign='center';
+  ctx.fillText('MAMULAUS',CFG.CANVAS_W/2,CFG.CANVAS_H/2-25);
+  ctx.restore();
+  ctx.fillStyle=`rgba(220,180,255,${a})`;ctx.font='14px monospace';ctx.textAlign='center';
+  ctx.fillText('Guardian of the Wrapzone — Master of Dark Magic',CFG.CANVAS_W/2,CFG.CANVAS_H/2+15);
+  ctx.fillStyle=`rgba(160,200,255,${a})`;ctx.font='11px monospace';
+  ctx.fillText('🛡 Stop shooting when shielded  •  ⚡ Hit when stunned  •  🌀 Watch orb patterns!',CFG.CANVAS_W/2,CFG.CANVAS_H/2+42);
+  ctx.textAlign='left';
+}
+
+// ── PATCH KEYBOARD FOR TERMINAL INPUT ─────────────────────────
+const _origKeyHandler = window.onkeydown;
+document.addEventListener('keydown', e => handleTerminalInput(e.code));
