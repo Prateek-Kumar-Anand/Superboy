@@ -1,71 +1,73 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Operation Iron Pixel</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <div id="app">
-      <header>
-        <h1>Operation Iron Pixel</h1>
-        <p>Retro run-and-gun prototype inspired by classic arcade action.</p>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Operation Iron Pixel</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
 
-      <section id="character-select" class="panel">
-        <h2>Choose Your Operative</h2>
-        <p>Selection is permanent for this run. To switch, restart campaign.</p>
-        <div class="character-grid">
-          <button class="character-card" data-character="naveen">
-            <h3>Naveen</h3>
-            <p>Main Character</p>
+  <div id="app">
+
+    <!-- ── CHARACTER SELECT OVERLAY ─────────────────── -->
+    <div id="select-overlay" class="overlay">
+      <div class="select-box">
+        <div class="title-block">
+          <h1>OPERATION<br>IRON PIXEL</h1>
+          <p class="subtitle">YEAR 4089 — EARTH IS NEARLY DESTROYED</p>
+          <p class="subtitle dim">Two soldiers emerge from the darkness.<br>Choose your operative.</p>
+        </div>
+
+        <div class="char-grid">
+          <button id="btn-naveen" class="char-card naveen-card">
+            <div class="char-portrait naveen-portrait">N</div>
+            <h2>NAVEEN</h2>
+            <p>Male Operative</p>
+            <ul>
+              <li>High speed run</li>
+              <li>Heavy firepower</li>
+              <li>10-frame animations</li>
+            </ul>
           </button>
-          <button class="character-card" data-character="radhika">
-            <h3>Radhika</h3>
-            <p>Female Playable Character</p>
+
+          <button id="btn-radhika" class="char-card radhika-card">
+            <div class="char-portrait radhika-portrait">R</div>
+            <h2>RADHIKA</h2>
+            <p>Female Operative</p>
+            <ul>
+              <li>Agile dash</li>
+              <li>Precise aim</li>
+              <li>6-direction sprites</li>
+            </ul>
           </button>
         </div>
-      </section>
 
-      <main id="game-ui" class="hidden">
-        <aside class="panel left-panel">
-          <h2>Loadout</h2>
-          <p id="selected-character"></p>
-          <h3>Guns (35)</h3>
-          <ul id="guns-list"></ul>
-          <h3>Armored Vehicles (4)</h3>
-          <ul id="vehicles-list"></ul>
-          <h3>Power-Ups (9)</h3>
-          <ul id="powerups-list"></ul>
-        </aside>
-
-        <section class="game-stage panel">
-          <div class="hud">
-            <span id="current-bg-label"></span>
-            <span id="villain-label"></span>
-            <button id="next-stage">Next Stage</button>
-            <button id="restart-run">Restart Run</button>
-          </div>
-          <canvas id="game-canvas" width="960" height="540"></canvas>
-          <p class="hint">Placeholder pixel-art scene: future assets can plug into the rendering layers.</p>
-        </section>
-
-        <aside class="panel right-panel">
-          <h2>Major Villains (5)</h2>
-          <ol id="villains-list"></ol>
-          <h3>World Themes (5)</h3>
-          <ul id="themes-list"></ul>
-          <h3>Upgrade Notes</h3>
-          <ul>
-            <li>Entity-driven content config in <code>gameData</code>.</li>
-            <li>Renderer separated from game state logic.</li>
-            <li>Ready to swap placeholder sprites with real sprite sheets.</li>
-          </ul>
-        </aside>
-      </main>
+        <div class="controls-hint">
+          <span>← → MOVE</span>
+          <span>SHIFT RUN</span>
+          <span>↑ / Z JUMP</span>
+          <span>↓ CROUCH</span>
+          <span>↓+SHIFT SLIDE</span>
+          <span>X / SPACE SHOOT</span>
+        </div>
+      </div>
     </div>
 
-    <script src="game.js"></script>
-  </body>
+    <!-- ── GAME OVER OVERLAY ─────────────────────────── -->
+    <div id="gameover-overlay" class="overlay hidden">
+      <div class="gameover-box">
+        <h1 class="gameover-title">GAME OVER</h1>
+        <p class="score-display">FINAL SCORE: <span id="final-score">0</span></p>
+        <button id="btn-restart" class="restart-btn">▶ PLAY AGAIN</button>
+      </div>
+    </div>
+
+    <!-- ── GAME CANVAS ───────────────────────────────── -->
+    <canvas id="game-canvas" width="960" height="540"></canvas>
+
+  </div>
+
+  <script src="game.js"></script>
+</body>
 </html>
