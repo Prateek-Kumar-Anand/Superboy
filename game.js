@@ -126,13 +126,136 @@ const RAD = {
 const SOLDIER_CFG = {
   frameW:100,frameH:100,scale:1.6,feetDY:-91,
   anims:{
-    idle:  {src:'sprites/soldier/Soldier-Idle.png',     frames:6,fps:6},
-    walk:  {src:'sprites/soldier/Soldier-Walk.png',     frames:8,fps:10},
-    attack:{src:'sprites/soldier/Soldier-Attack01.png', frames:6,fps:10},
-    hurt:  {src:'sprites/soldier/Soldier-Hurt.png',     frames:4,fps:10,loop:false},
-    death: {src:'sprites/soldier/Soldier-Death.png',    frames:4,fps:8, loop:false},
+    idle:    {src:'sprites/soldier/Soldier-Idle.png',          frames:6,fps:6},
+    walk:    {src:'sprites/soldier/Soldier-Walk.png',          frames:8,fps:10},
+    attack:  {src:'sprites/soldier/Soldier-Attack01.png',      frames:6,fps:12,loop:false},
+    attack2: {src:'sprites/soldier/Soldier-Attack02.png',      frames:6,fps:12,loop:false},
+    attack3: {src:'sprites/soldier/Soldier-Attack03.png',      frames:9,fps:12,loop:false},
+    shadow:  {src:'sprites/soldier/Soldier-Shadow_attack2.png',frames:6,fps:14,loop:false},
+    hurt:    {src:'sprites/soldier/Soldier-Hurt.png',          frames:4,fps:10,loop:false},
+    death:   {src:'sprites/soldier/Soldier-Death.png',         frames:4,fps:8, loop:false},
   }
 };
+
+
+// ══════════════════════════════════════════════════════════════
+//  WEAPON / AMMO / EXPLOSION SYSTEM
+// ══════════════════════════════════════════════════════════════
+const WEAPONS = {
+  pistol:  {name:'Pistol',   ammo:20,dmg:8,  cd:12,bulletType:0,color:'#ffe060'},
+  smg:     {name:'SMG',      ammo:45,dmg:6,  cd:5, bulletType:1,color:'#ff9900'},
+  shotgun: {name:'Shotgun',  ammo:12,dmg:25, cd:35,bulletType:2,color:'#ff6600',spread:true},
+  rifle:   {name:'Rifle',    ammo:25,dmg:15, cd:8, bulletType:3,color:'#00ffcc'},
+  sniper:  {name:'Sniper',   ammo:8, dmg:40, cd:40,bulletType:4,color:'#88aaff'},
+  lmg:     {name:'LMG',      ammo:80,dmg:10, cd:4, bulletType:5,color:'#ffcc00'},
+  heavy:   {name:'Launcher', ammo:5, dmg:60, cd:60,bulletType:6,color:'#ff4400',explosive:true},
+  grenade: {name:'Grenades', ammo:6, dmg:80, cd:90,bulletType:7,color:'#44ff44',explosive:true},
+};
+let pickups=[],activeWeapon='pistol',explosions=[];
+let bulletImgs={},expBigImg=null,expSmallImg=null,pickupImgs={};
+
+function loadWeaponAssets(cb){
+  let n=0,total=0;const check=()=>{if(++n>=total&&cb)cb();};
+  total+=8;
+  for(let i=0;i<8;i++){const img=new Image();img.onload=img.onerror=check;
+    img.src='sprites/bullets/bullet_'+String(i).padStart(2,'0')+'.png';bulletImgs[i]=img;}
+  total+=2;
+  expBigImg=new Image();expBigImg.onload=expBigImg.onerror=check;expBigImg.src='sprites/explosions/exp_01.png';
+  expSmallImg=new Image();expSmallImg.onload=expSmallImg.onerror=check;expSmallImg.src='sprites/explosions/exp_00.png';
+  const pnames=['pistol','smg','shotgun','rifle','sniper','lmg','heavy','grenade','ammo'];
+  total+=pnames.length;
+  pnames.forEach(nm=>{const img=new Image();img.onload=img.onerror=check;
+    img.src='sprites/pickups/'+nm+'.png';pickupImgs[nm]=img;});
+}
+
+function spawnLevelPickups(lvl){
+  const wlist=Object.keys(WEAPONS);
+  const spacing=lvl===1?380:280,count=lvl===1?14:20;
+  for(let i=0;i<count;i++){
+    const x=250+i*spacing+(Math.random()*130|0);
+    const rng=Math.random();
+    const tp=rng<0.35?'ammo':rng<0.5?'grenade':wlist[2+Math.floor(Math.random()*(wlist.length-2))];
+    pickups.push({x,y:CFG.GROUND_Y,type:tp,collected:false,bobTimer:Math.random()*Math.PI*2,glowTimer:0});
+  }
+}
+
+function updatePickups(){
+  for(const pk of pickups){
+    if(pk.collected)continue;
+    pk.bobTimer+=0.05;pk.glowTimer++;
+    if(Math.abs(player.x-pk.x)<44&&player.y>=CFG.GROUND_Y-60){pk.collected=true;collectPickup(pk);}
+  }
+}
+
+function collectPickup(pk){
+  const w=WEAPONS[pk.type];
+  if(pk.type==='ammo'){player.ammo=Math.min(player.ammo+30,200);
+    floatText(pk.x,pk.y-50,'+30 AMMO','#ffd166',14);spawnParticles(pk.x,pk.y-20,'#ffd166',8);}
+  else if(w){activeWeapon=pk.type;player.ammo=Math.min(player.ammo+w.ammo,200);player.hasGun=true;
+    floatText(pk.x,pk.y-50,w.name+' GET!','#00ffcc',16);spawnParticles(pk.x,pk.y-20,'#00ffcc',12);shake(3,6);}
+}
+
+function spawnExplosion(x,y,big=false){
+  explosions.push({x,y,big,frame:0,timer:0,maxFrames:big?12:21,frameSize:big?128:48,done:false});
+  shake(big?10:5,big?18:8);
+}
+
+function updateExplosions(){
+  explosions.forEach(ex=>{ex.timer++;if(ex.timer>=(ex.big?3:2)){ex.timer=0;ex.frame++;if(ex.frame>=ex.maxFrames)ex.done=true;}});
+  explosions=explosions.filter(e=>!e.done);
+}
+
+function drawExplosions(){
+  for(const ex of explosions){
+    const sx=ex.x-camera.x;const img=ex.big?expBigImg:expSmallImg;
+    const prog=ex.frame/ex.maxFrames;
+    if(!img?.naturalWidth){
+      const r=(ex.big?80:35)*Math.sin(prog*Math.PI);
+      ctx.save();ctx.globalAlpha=1-prog;
+      const g=ctx.createRadialGradient(sx,ex.y,0,sx,ex.y,r);
+      g.addColorStop(0,'#fff');g.addColorStop(0.3,'#ffcc00');g.addColorStop(0.7,'#ff4400');g.addColorStop(1,'rgba(100,0,0,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx,ex.y,r,0,Math.PI*2);ctx.fill();ctx.restore();continue;
+    }
+    const fs=ex.frameSize,sc=ex.big?1.5:1.2,dw=fs*sc,dh=fs*sc;
+    ctx.save();ctx.globalAlpha=1-prog*0.4;
+    ctx.drawImage(img,ex.frame*fs,0,fs,fs,sx-dw/2,ex.y-dh,dw,dh);ctx.restore();
+  }
+}
+
+function drawPickups(){
+  for(const pk of pickups){
+    if(pk.collected)continue;
+    const sx=pk.x-camera.x,bob=Math.sin(pk.bobTimer)*5,sy=pk.y-30+bob;
+    const col=pk.type==='ammo'?'#ffd166':pk.type==='grenade'?'#44ff44':'#00ffcc';
+    ctx.save();ctx.shadowColor=col;ctx.shadowBlur=14*(Math.sin(pk.glowTimer*0.1)*0.3+0.7);
+    const img=pickupImgs[pk.type]||pickupImgs['ammo'];
+    if(img?.naturalWidth)ctx.drawImage(img,sx-24,sy-16,48,24);
+    else{ctx.fillStyle=col;ctx.fillRect(sx-16,sy-12,32,18);}
+    ctx.restore();
+    ctx.fillStyle='#111';ctx.fillRect(sx-16,sy+8,32,14);
+    ctx.fillStyle=col;ctx.font='bold 9px monospace';ctx.textAlign='center';
+    ctx.fillText(pk.type==='ammo'?'+30 AMMO':'+'+((WEAPONS[pk.type]?.ammo)||'?')+' '+((WEAPONS[pk.type]?.name)||'?'),sx,sy+19);
+    ctx.textAlign='left';
+    if(Math.abs(player.x-pk.x)<90){
+      ctx.fillStyle='rgba(255,255,255,0.8)';ctx.font='8px monospace';ctx.textAlign='center';
+      ctx.fillText('▼ walk over',sx,sy-24);ctx.textAlign='left';}
+  }
+}
+
+function drawWeaponHUD(){
+  if(!player.hasGun)return;
+  const w=WEAPONS[activeWeapon];if(!w)return;
+  const wx=CFG.CANVAS_W-204,wy=56;
+  ctx.fillStyle='rgba(0,0,0,0.72)';ctx.fillRect(wx-6,wy-4,198,44);
+  ctx.strokeStyle=w.color;ctx.lineWidth=1.5;ctx.strokeRect(wx-6,wy-4,198,44);
+  const img=pickupImgs[activeWeapon];
+  if(img?.naturalWidth)ctx.drawImage(img,wx,wy,48,24);
+  ctx.fillStyle=w.color;ctx.font='bold 11px monospace';ctx.fillText(w.name,wx+54,wy+12);
+  ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.fillText('AMMO: '+player.ammo,wx+54,wy+27);
+  ctx.fillStyle='#222';ctx.fillRect(wx+54,wy+31,134,5);
+  ctx.fillStyle=player.ammo>10?w.color:'#ff4444';
+  ctx.fillRect(wx+54,wy+31,Math.min(134,134*(player.ammo/(w.ammo*3))),5);
+}
 
 // ── GLOBALS ────────────────────────────────────────────────────
 let canvas,ctx,images={},keys={},prevKeys={},frameCount=0;
@@ -259,9 +382,10 @@ function initPlayer(charKey){
     anim:{name:'idle',frame:0,timer:0},
   };
   camera.x=0;
-  bullets=[];enemyBullets=[];particles=[];
-  chests=[];enemies=[];floatTexts=[];shockwaves=[];
+  bullets=[];enemyBullets=[];particles=[];explosions=[];
+  chests=[];enemies=[];floatTexts=[];shockwaves=[];pickups=[];
   shootTimer=0;sublevel=1;levelComplete=false;
+  activeWeapon='pistol';
   sublevelTransition=false;sublevelTimer=0;
   noteVisible=false;bossActive=false;
   bossIntro=false;boss=null;victoryScreen=false;victoryTimer=0;
@@ -274,24 +398,21 @@ function spawnSublevel(lvl){
   sublevel=lvl;levelComplete=false;sublevelTransition=false;
 
   if(lvl===1){
-    // 7 soldiers — simple positions
     [700,1050,1500,1950,2400,2900,3400].forEach((x,i)=>spawnSoldier(x,i%2===0?-1:1));
-    spawnChest(900);
-    spawnChest(2100);
+    spawnChest(900); spawnChest(2100);
+    spawnLevelPickups(1);
     // Show opening note
     setTimeout(()=>showNote(
       '"You are our hope. Free us."',
       '— crumpled letter in your pocket',180),600);
   } else if(lvl===2){
-    // 10 soldiers — more spread, some grouped
     [600,850,1200,1500,1800,2100,2600,3000,3500,4000].forEach((x,i)=>spawnSoldier(x,i%2===0?-1:1));
-    spawnChest(750);
-    spawnChest(1700);
-    spawnChest(3200);
+    spawnChest(750); spawnChest(1700); spawnChest(3200);
+    spawnLevelPickups(2);
     showNote('STAGE 1-2','Fight through and reach the end!',100);
   } else if(lvl===3){
-    // 8 soldiers — tighter, faster approach to boss territory
     [550,800,1100,1500,1900,2300,2700,3100].forEach((x,i)=>spawnSoldier(x,i%2===0?-1:1));
+    spawnLevelPickups(3);
     // Make last 3 soldiers slightly tougher
     enemies[5].hp=45;enemies[5].maxHp=45;
     enemies[6].hp=45;enemies[6].maxHp=45;
@@ -453,14 +574,28 @@ function updatePlayer(){
     }
   }
 
-  // Shoot
+  // Shoot — weapon system
   if(shootTimer>0)shootTimer--;
-  if(doShoot&&shootTimer===0){
-    shootTimer=CFG.SHOOT_CD;
-    const by=p.y-(p.crouching||p.sliding?28:62);
-    bullets.push({x:p.x+p.facing*28,y:by,vx:p.facing*CFG.BULLET_SPD,vy:0,alive:true});
+  if(doShoot&&shootTimer===0&&player.ammo>0){
+    const w = WEAPONS[activeWeapon] || WEAPONS.pistol;
+    shootTimer = w.cd;
+    const by = p.y - (p.crouching||p.sliding ? 28 : 62);
+    const bx = p.x + p.facing * 30;
+
+    if(w.spread) {
+      // Shotgun: 5 spread bullets
+      for(let i = -2; i <= 2; i++) {
+        bullets.push({x:bx,y:by,vx:p.facing*CFG.BULLET_SPD,vy:i*2,alive:true,
+          wtype:w.bulletType,dmg:w.dmg,color:w.color,explosive:w.explosive||false});
+      }
+    } else {
+      bullets.push({x:bx,y:by,vx:p.facing*CFG.BULLET_SPD*(w.bulletType===4?1.5:1),
+        vy:0,alive:true,wtype:w.bulletType,dmg:w.dmg,color:w.color,explosive:w.explosive||false});
+    }
     p.ammo--;
-    spawnParticles(p.x+p.facing*32,by,'#ffe060',2);
+    spawnParticles(bx, by, w.color, 3);
+    // Muzzle flash
+    floatText(bx + p.facing*10, by - 5, '💥', '#fff', 12);
   }
 
   p.vy+=CFG.GRAVITY;p.x+=p.vx;p.y+=p.vy;
@@ -787,7 +922,9 @@ function updateBullets(){
 
 function hurtPlayer(dmg){
   player.health-=dmg;player.invincible=50;
-  spawnParticles(player.x,player.y-50,'#ff2222',5);
+  spawnParticles(player.x,player.y-50,'#ff2222',6);
+  // Melee hit sparks
+  spawnParticles(player.x,player.y-60,'#ffaa00',4);
   shake(4,8);
   if(player.health<=0){
     player.health=0;player.dead=true;player.deathTimer=0;
@@ -943,12 +1080,25 @@ function drawEnemies(){
 
 function drawBullets(){
   for(const b of bullets){
-    const bx=b.x-camera.x;
-    ctx.save();ctx.shadowColor='#ffe060';ctx.shadowBlur=8;
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(bx,b.y,7,3,0,0,Math.PI*2);ctx.fill();
+    const bx = b.x - camera.x;
+    const wtype = b.wtype ?? 0;
+    const img = bulletImgs[wtype];
+    ctx.save();
+    ctx.shadowColor = b.color || '#ffe060';
+    ctx.shadowBlur = 10;
+    if(img?.naturalWidth) {
+      ctx.translate(bx, b.y);
+      if(b.vx < 0) ctx.scale(-1, 1);
+      ctx.drawImage(img, -16, -8, 32, 16);
+      // Trail
+      ctx.globalAlpha = 0.4;
+      ctx.drawImage(img, -32, -8, 32, 16);
+    } else {
+      ctx.fillStyle = b.color || '#ffe060';
+      ctx.beginPath(); ctx.ellipse(0, b.y - bx*0, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+      ctx.translate(bx, b.y);
+    }
     ctx.restore();
-    ctx.fillStyle='#ffe060';ctx.beginPath();ctx.ellipse(bx,b.y,5,2.5,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,200,50,0.2)';ctx.beginPath();ctx.ellipse(bx-b.vx*2,b.y,10,2,0,0,Math.PI*2);ctx.fill();
   }
   for(const b of enemyBullets){
     const bx=b.x-camera.x;
@@ -1205,6 +1355,8 @@ function gameLoop(){
     updateShake();updateParticles();updateFloatTexts();updateShockwaves();
     if(!victoryScreen){
       updatePlayer();
+      updatePickups();
+      updateExplosions();
       if(currentLevel===1){
         updateChests();
         if(bossActive)updateBoss();
@@ -1232,7 +1384,7 @@ function gameLoop(){
     else if(currentLevel===3){ drawFaultmineNight(); drawL3Chests(); drawEnemies(); }
     else if(currentLevel===4){ drawAkustusBackground(); drawEnemies(); }
     else if(currentLevel===5){ drawLabBackground(); drawEnemies(); }
-    drawBullets(); drawParticles(); drawPlayer();
+    drawPickups(); drawBullets(); drawExplosions(); drawParticles(); drawPlayer();
     if(currentLevel===1&&bossActive)drawBoss();
     if(currentLevel===2&&bossActive)drawMamulaus();
     if(currentLevel===3&&bossActive)drawAvera();
@@ -1244,6 +1396,7 @@ function gameLoop(){
     if(currentLevel===2)drawKillCounter();
     if(currentLevel===3)drawPhoneCall();
     drawHUD();
+    drawWeaponHUD();
     drawNote();
     drawSublevelTransition();
     if(bossIntro&&currentLevel===1)drawBossIntro();
@@ -2537,12 +2690,17 @@ function updateL3Enemies(){
     const spd=e.heavy?1.3:2.0;
     if(e.hurtTimer>0){e.hurtTimer--;setAnim(e.anim,'hurt');}
     else if(Math.abs(dx)<e.attackRange){
-      e.vx=0;setAnim(e.anim,'attack');
-      if(e.shootCd>0)e.shootCd--;
+      e.vx=0;
+      const atk=e.heavy?'attack3':'attack';
+      if(e.anim.name==='walk'||e.anim.name==='idle')setAnim(e.anim,atk);
+      if(e.attackCd>0)e.attackCd--;
       else{
-        e.shootCd=e.heavy?70:90;
-        enemyBullets.push({x:e.x+e.facing*22,y:e.y-(e.heavy?70:55),vx:e.facing*(e.heavy?5:7),vy:0,alive:true,boss:false});
-        if(e.heavy) enemyBullets.push({x:e.x+e.facing*22,y:e.y-50,vx:e.facing*5,vy:2,alive:true,boss:false});
+        e.attackCd=e.heavy?48:55;
+        if(Math.abs(dx)<e.attackRange&&player.invincible===0&&!player.dead){
+          hurtPlayer(e.heavy?16:10);
+          spawnParticles(player.x,player.y-50,'#ff4444',e.heavy?6:3);
+          if(e.heavy)shake(3,5);
+        }
       }
     } else if(Math.abs(dx)<e.alertRange){
       e.vx=e.facing*spd;setAnim(e.anim,'walk');
@@ -2551,10 +2709,6 @@ function updateL3Enemies(){
     }
     e.x+=e.vx;e.x=Math.max(50,Math.min(CFG.LEVEL_W-50,e.x));
     tickAnim(e.anim,SOLDIER_CFG.anims);
-    if(player.invincible===0&&!player.dead){
-      const dmg=e.heavy?14:8;
-      if(Math.abs(e.x-player.x)<34&&Math.abs(e.y-player.y)<88)hurtPlayer(dmg);
-    }
   }
 }
 
@@ -3533,23 +3687,21 @@ function updateL5Enemies(){
     const spd=e.elite?3:e.heavy?1.8:e.shadow?2.8:2.2;
     if(e.hurtTimer>0){e.hurtTimer--;setAnim(e.anim,'hurt');}
     else if(Math.abs(dx)<e.attackRange){
-      e.vx=0;setAnim(e.anim,'attack');
-      if(e.shootCd>0)e.shootCd--;
+      e.vx=0;
+      const atk=e.elite?'shadow':e.shadow?'attack3':e.heavy?'attack2':'attack';
+      if(e.anim.name==='walk'||e.anim.name==='idle')setAnim(e.anim,atk);
+      if(e.attackCd>0)e.attackCd--;
       else{
-        e.shootCd=e.elite?45:e.heavy?62:80;
-        enemyBullets.push({x:e.x+e.facing*22,y:e.y-60,vx:e.facing*8,vy:0,alive:true,boss:false});
-        if(e.elite||e.shadow){
-          enemyBullets.push({x:e.x+e.facing*22,y:e.y-60,vx:e.facing*7,vy:-2,alive:true,boss:false});
-          enemyBullets.push({x:e.x+e.facing*22,y:e.y-60,vx:e.facing*7,vy:2, alive:true,boss:false});
+        e.attackCd=e.elite?38:e.shadow?42:e.heavy?48:55;
+        if(Math.abs(dx)<e.attackRange&&player.invincible===0&&!player.dead){
+          hurtPlayer(e.elite?20:e.shadow?16:e.heavy?14:10);
+          spawnParticles(player.x,player.y-50,'#ff4444',e.elite?8:5);
+          if(e.elite||e.heavy)shake(4,6);
         }
       }
     } else {e.vx=e.facing*spd;setAnim(e.anim,'walk');}
     e.x+=e.vx;e.x=Math.max(50,Math.min(CFG.LEVEL_W-50,e.x));
     tickAnim(e.anim,SOLDIER_CFG.anims);
-    if(player.invincible===0&&!player.dead){
-      const dmg=e.elite?18:e.heavy?12:8;
-      if(Math.abs(e.x-player.x)<34&&Math.abs(e.y-player.y)<90)hurtPlayer(dmg);
-    }
   }
 }
 function checkL5Progress(){
