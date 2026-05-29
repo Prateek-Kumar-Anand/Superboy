@@ -1,73 +1,97 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Operation Iron Pixel</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
 
-  <div id="app">
+<div id="app">
 
-    <!-- ── CHARACTER SELECT OVERLAY ─────────────────── -->
-    <div id="select-overlay" class="overlay">
-      <div class="select-box">
-        <div class="title-block">
-          <h1>OPERATION<br>IRON PIXEL</h1>
-          <p class="subtitle">YEAR 4089 — EARTH IS NEARLY DESTROYED</p>
-          <p class="subtitle dim">Two soldiers emerge from the darkness.<br>Choose your operative.</p>
-        </div>
-
-        <div class="char-grid">
-          <button id="btn-naveen" class="char-card naveen-card">
-            <div class="char-portrait naveen-portrait">N</div>
-            <h2>NAVEEN</h2>
-            <p>Male Operative</p>
-            <ul>
-              <li>High speed run</li>
-              <li>Heavy firepower</li>
-              <li>10-frame animations</li>
-            </ul>
-          </button>
-
-          <button id="btn-radhika" class="char-card radhika-card">
-            <div class="char-portrait radhika-portrait">R</div>
-            <h2>RADHIKA</h2>
-            <p>Female Operative</p>
-            <ul>
-              <li>Agile dash</li>
-              <li>Precise aim</li>
-              <li>6-direction sprites</li>
-            </ul>
-          </button>
-        </div>
-
-        <div class="controls-hint">
-          <span>← → MOVE</span>
-          <span>SHIFT RUN</span>
-          <span>↑ / Z JUMP</span>
-          <span>↓ CROUCH</span>
-          <span>↓+SHIFT SLIDE</span>
-          <span>X / SPACE SHOOT</span>
-        </div>
+  <!-- ── CHARACTER SELECT ─────────────────────────────── -->
+  <div id="select-overlay" class="overlay">
+    <div class="select-box">
+      <div class="title-block">
+        <h1>OPERATION<br>IRON PIXEL</h1>
+        <p class="subtitle">YEAR 4096 — EARTH IS NEARLY DESTROYED</p>
+        <p class="subtitle dim">Two soldiers emerge from the darkness.<br>Choose your operative.</p>
+      </div>
+      <div class="char-grid">
+        <button id="btn-naveen" class="char-card naveen-card">
+          <div class="char-portrait naveen-portrait">N</div>
+          <h2>NAVEEN</h2>
+          <p>Male Operative</p>
+          <ul>
+            <li>Heavy firepower</li>
+            <li>High speed run</li>
+            <li>16 animations</li>
+          </ul>
+        </button>
+        <button id="btn-radhika" class="char-card radhika-card">
+          <div class="char-portrait radhika-portrait">R</div>
+          <h2>RADHIKA</h2>
+          <p>Female Operative</p>
+          <ul>
+            <li>Agile dash</li>
+            <li>Precise aim</li>
+            <li>Fast movement</li>
+          </ul>
+        </button>
+      </div>
+      <div class="controls-hint" id="controls-hint-desktop">
+        <span>← → MOVE</span><span>SHIFT RUN</span><span>↑/Z JUMP</span>
+        <span>↓ CROUCH</span><span>↓+SHIFT SLIDE</span><span>X/SPACE SHOOT</span><span>C ROLL</span>
+      </div>
+      <div class="controls-hint" id="controls-hint-mobile" style="display:none">
+        <span>🕹 D-PAD to move</span><span>🔴 SHOOT</span><span>🟢 JUMP</span>
+        <span>🔵 RUN+SLIDE</span><span>🟡 ROLL</span>
       </div>
     </div>
+  </div>
 
-    <!-- ── GAME OVER OVERLAY ─────────────────────────── -->
-    <div id="gameover-overlay" class="overlay hidden">
-      <div class="gameover-box">
-        <h1 class="gameover-title">GAME OVER</h1>
-        <p class="score-display">FINAL SCORE: <span id="final-score">0</span></p>
-        <button id="btn-restart" class="restart-btn">▶ PLAY AGAIN</button>
-      </div>
+  <!-- ── GAME OVER ─────────────────────────────────────── -->
+  <div id="gameover-overlay" class="overlay hidden">
+    <div class="gameover-box">
+      <h1 class="gameover-title">GAME OVER</h1>
+      <p class="score-display">FINAL SCORE: <span id="final-score">0</span></p>
+      <button id="btn-restart" class="restart-btn">▶ PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <!-- ── CANVAS ─────────────────────────────────────────── -->
+  <canvas id="game-canvas" width="960" height="540"></canvas>
+
+  <!-- ── MOBILE TOUCH CONTROLS ─────────────────────────── -->
+  <div id="mobile-controls" style="display:none">
+
+    <!-- LEFT: D-PAD -->
+    <div id="dpad">
+      <button class="dpad-btn" id="btn-left"  data-key="ArrowLeft">◀</button>
+      <button class="dpad-btn" id="btn-right" data-key="ArrowRight">▶</button>
+      <button class="dpad-btn" id="btn-down"  data-key="ArrowDown">▼</button>
     </div>
 
-    <!-- ── GAME CANVAS ───────────────────────────────── -->
-    <canvas id="game-canvas" width="960" height="540"></canvas>
+    <!-- RIGHT: ACTION BUTTONS -->
+    <div id="action-btns">
+      <div class="action-row">
+        <button class="action-btn btn-roll"  data-key="KeyC">ROLL</button>
+        <button class="action-btn btn-jump"  data-key="ArrowUp">JUMP</button>
+      </div>
+      <div class="action-row">
+        <button class="action-btn btn-run"   data-key="ShiftLeft">RUN</button>
+        <button class="action-btn btn-shoot" data-key="KeyX">SHOOT</button>
+      </div>
+    </div>
 
   </div>
 
-  <script src="game.js"></script>
+</div>
+
+<script src="game.js"></script>
 </body>
 </html>
