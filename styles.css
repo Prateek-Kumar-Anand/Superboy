@@ -1,0 +1,290 @@
+/* ══════════════════════════════════════════════════════
+   OPERATION IRON PIXEL — styles.css
+   (was missing entirely — this is what caused every
+   layout/scaling problem: no centering, .hidden had no
+   effect, overlays didn't overlay, mobile controls had
+   no positioning.)
+   ══════════════════════════════════════════════════════ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #05050a;
+  overflow: hidden;
+  font-family: 'Courier New', Courier, monospace;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ── CANVAS ─────────────────────────────────────────── */
+#game-canvas {
+  display: block;
+  background: #000;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  box-shadow: 0 0 40px rgba(0, 0, 0, .7);
+  flex-shrink: 0;
+}
+
+/* ── OVERLAYS (character select / game over) ─────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #14141f 0%, #05050a 100%);
+  padding: 16px;
+  overflow-y: auto;
+}
+.overlay.hidden { display: none; }
+
+.select-box, .gameover-box {
+  width: 100%;
+  max-width: 620px;
+  text-align: center;
+  color: #e8e8f0;
+}
+
+.title-block h1 {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 6vw, 46px);
+  line-height: 1.15;
+  letter-spacing: 4px;
+  color: #ffcf3c;
+  text-shadow: 0 0 14px rgba(255, 180, 0, .55);
+}
+.subtitle {
+  margin: 4px 0;
+  font-size: clamp(11px, 2.4vw, 14px);
+  color: #9aa0b4;
+  letter-spacing: 1px;
+}
+.subtitle.dim { color: #5c6178; }
+
+/* ── CHARACTER SELECT GRID ───────────────────────────── */
+.char-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 26px 0;
+}
+.char-card {
+  background: rgba(255, 255, 255, .05);
+  border: 2px solid rgba(255, 255, 255, .15);
+  border-radius: 10px;
+  padding: 16px 12px;
+  color: #e8e8f0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.char-card:hover, .char-card:active {
+  transform: translateY(-4px);
+  border-color: #ffcf3c;
+  background: rgba(255, 255, 255, .08);
+}
+.char-card h2 {
+  margin: 6px 0 2px;
+  font-size: clamp(15px, 3vw, 20px);
+  letter-spacing: 2px;
+}
+.char-card p {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #9aa0b4;
+}
+.char-card ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  text-align: left;
+  font-size: clamp(10px, 2.2vw, 12px);
+  color: #b8bccb;
+}
+.char-card li {
+  margin: 3px 0;
+  padding-left: 14px;
+  position: relative;
+}
+.char-card li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: #ffcf3c;
+}
+.char-portrait {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: bold;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, .3);
+}
+.naveen-portrait  { background: radial-gradient(circle at 35% 30%, #4a8bff, #10327a); }
+.radhika-portrait { background: radial-gradient(circle at 35% 30%, #ff5c9a, #8a0e3f); }
+
+/* ── CONTROLS HINT ───────────────────────────────────── */
+.controls-hint {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+  margin-top: 8px;
+  font-size: clamp(9px, 2vw, 11px);
+  color: #7d8299;
+  letter-spacing: .5px;
+}
+.controls-hint span {
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+/* ── GAME OVER ────────────────────────────────────────── */
+.gameover-title {
+  margin: 0 0 14px;
+  font-size: clamp(30px, 7vw, 54px);
+  letter-spacing: 3px;
+  color: #ff3c3c;
+  text-shadow: 0 0 18px rgba(255, 0, 0, .6);
+}
+.score-display {
+  font-size: clamp(14px, 3vw, 18px);
+  color: #e8e8f0;
+  margin-bottom: 22px;
+  letter-spacing: 1px;
+}
+#final-score { color: #ffcf3c; font-weight: bold; }
+
+.restart-btn {
+  font-family: inherit;
+  padding: 12px 30px;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  background: #ffcf3c;
+  color: #14141c;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #b8901c;
+}
+.restart-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #b8901c;
+}
+
+/* ── MOBILE TOUCH CONTROLS ───────────────────────────── */
+#mobile-controls {
+  display: none; /* toggled to flex by JS on mobile devices */
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px clamp(14px, 5vw, 34px);
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 20;
+  gap: 10px;
+}
+
+#dpad {
+  position: relative;
+  width: 148px;
+  height: 148px;
+  flex-shrink: 0;
+}
+#action-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.action-row {
+  display: flex;
+  gap: 14px;
+}
+
+.dpad-btn, .action-btn {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: inherit;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, .4);
+  background: rgba(255, 255, 255, .12);
+  transition: transform .08s ease, background .08s ease;
+}
+
+.dpad-btn {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  font-size: 20px;
+}
+#btn-left  { left: 0;    top: 47px; }
+#btn-right { left: 94px; top: 47px; }
+#btn-down  { left: 47px; top: 94px; }
+
+.action-btn {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  font-size: 10px;
+  letter-spacing: .5px;
+}
+.btn-roll  { background: rgba(255, 210, 0, .3); }
+.btn-jump  { background: rgba(0, 220, 120, .3); }
+.btn-run   { background: rgba(70, 140, 255, .3); }
+.btn-shoot { background: rgba(255, 60, 60, .3); }
+
+.dpad-btn.pressed, .action-btn.pressed {
+  background: rgba(255, 255, 255, .4);
+  transform: scale(.9);
+}
+
+/* ── SMALL-SCREEN TWEAKS ─────────────────────────────── */
+@media (max-width: 480px) {
+  .char-grid { gap: 10px; }
+  .char-card { padding: 12px 8px; }
+  .char-card ul { display: none; } /* keep the select screen compact on phones */
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .title-block h1 { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { display: none; }
+  .char-grid { margin: 10px 0; }
+  .char-card ul { display: none; }
+}

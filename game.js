@@ -124,7 +124,7 @@ const RAD = {
   }
 };
 const SOLDIER_CFG = {
-  frameW:100,frameH:100,scale:1.6,feetDY:-91,
+  frameW:100,frameH:100,scale:4.0,feetDY:-228,
   anims:{
     idle:    {src:'sprites/soldier/Soldier-Idle.png',          frames:6,fps:6},
     walk:    {src:'sprites/soldier/Soldier-Walk.png',          frames:8,fps:10},
@@ -1065,11 +1065,12 @@ function drawEnemies(){
     if(sx<-120||sx>CFG.CANVAS_W+120)continue;
     const img=images.soldier?.[e.anim.name];
     const dw=SOLDIER_CFG.frameW*SOLDIER_CFG.scale,dh=SOLDIER_CFG.frameH*SOLDIER_CFG.scale;
+    const dy=SOLDIER_CFG.feetDY;
     ctx.save();ctx.translate(sx,e.y);
     if(e.facing<0)ctx.scale(-1,1);
     if(img?.complete&&img.naturalWidth>0)
-      ctx.drawImage(img,e.anim.frame*SOLDIER_CFG.frameW,0,SOLDIER_CFG.frameW,SOLDIER_CFG.frameH,-dw/2,-91,dw,dh);
-    else{ctx.fillStyle='#4a4a5a';ctx.fillRect(-20,-91,40,91);}
+      ctx.drawImage(img,e.anim.frame*SOLDIER_CFG.frameW,0,SOLDIER_CFG.frameW,SOLDIER_CFG.frameH,-dw/2,dy,dw,dh);
+    else{ctx.fillStyle='#4a4a5a';ctx.fillRect(-dw*0.15,dy,dw*0.3,-dy);}
     ctx.restore();
     if(e.hp<e.maxHp&&!e.dead){
       ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(sx-22,e.y-100,44,6);
