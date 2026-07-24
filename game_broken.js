@@ -95,17 +95,17 @@ const CFG = {
 const NAV = {
   frameW:120,frameH:80,scale:2.2,feetDY:-176,
   anims:{
-    idle:      {src:'sprites/naveen_new/_Idle.png',      frames:10,fps:8},
-    run:       {src:'sprites/naveen_new/_Run.png',       frames:10,fps:14},
-    jump:      {src:'sprites/naveen_new/_Jump.png',      frames:3, fps:8},
-    fall:      {src:'sprites/naveen_new/_Fall.png',      frames:3, fps:8},
-    crouch:    {src:'sprites/naveen_new/_CrouchFull.png',frames:3, fps:6},
-    crouchwalk:{src:'sprites/naveen_new/_CrouchWalk.png',frames:8, fps:10},
-    slide:     {src:'sprites/naveen_new/_SlideFull.png', frames:4, fps:10},
-    attack:    {src:'sprites/naveen_new/_Attack.png',    frames:4, fps:14,loop:false},
-    death:     {src:'sprites/naveen_new/_Death.png',     frames:10,fps:8, loop:false},
-    hit:       {src:'sprites/naveen_new/_Hit.png',       frames:1, fps:6},
-    roll:      {src:'sprites/naveen_new/_Roll.png',      frames:12,fps:16,loop:false},
+    idle:      {src:'sprites/BROKEN_PATH/_Idle.png',      frames:10,fps:8},
+    run:       {src:'sprites/BROKEN_PATH/_Run.png',       frames:10,fps:14},
+    jump:      {src:'sprites/BROKEN_PATH/_Jump.png',      frames:3, fps:8},
+    fall:      {src:'sprites/BROKEN_PATH/_Fall.png',      frames:3, fps:8},
+    crouch:    {src:'sprites/BROKEN_PATH/_CrouchFull.png',frames:3, fps:6},
+    crouchwalk:{src:'sprites/BROKEN_PATH/_CrouchWalk.png',frames:8, fps:10},
+    slide:     {src:'sprites/BROKEN_PATH/_SlideFull.png', frames:4, fps:10},
+    attack:    {src:'sprites/BROKEN_PATH/_Attack.png',    frames:4, fps:14,loop:false},
+    death:     {src:'sprites/BROKEN_PATH/_Death.png',     frames:10,fps:8, loop:false},
+    hit:       {src:'sprites/BROKEN_PATH/_Hit.png',       frames:1, fps:6},
+    roll:      {src:'sprites/BROKEN_PATH/_Roll.png',      frames:12,fps:16,loop:false},
   }
 };
 const RAD = {
@@ -274,8 +274,7 @@ function loadCharImages(cfg,key,cb){
   const ks=Object.keys(cfg.anims);let n=0;
   ks.forEach(k=>{
     const img=new Image();
-    img.onload=()=>{if(++n===ks.length)cb();};
-    img.onerror=()=>{console.error('[assets] failed to load',cfg.anims[k].src,'— check the file exists in the repo with this exact name/case.');if(++n===ks.length)cb();};
+    img.onload=img.onerror=()=>{if(++n===ks.length)cb();};
     img.src=cfg.anims[k].src; images[key][k]=img;
   });
 }
@@ -284,8 +283,7 @@ function loadSoldierImages(cb){
   const ks=Object.keys(SOLDIER_CFG.anims);let n=0;
   ks.forEach(k=>{
     const img=new Image();
-    img.onload=()=>{if(++n===ks.length)cb();};
-    img.onerror=()=>{console.error('[assets] failed to load',SOLDIER_CFG.anims[k].src,'— check the file exists in the repo with this exact name/case.');if(++n===ks.length)cb();};
+    img.onload=img.onerror=()=>{if(++n===ks.length)cb();};
     img.src=SOLDIER_CFG.anims[k].src; images.soldier[k]=img;
   });
 }
@@ -297,11 +295,9 @@ function loadTriantusImages(cb){
   Object.entries(COUNTS).forEach(([an,count])=>{
     for(let i=1;i<=count;i++){
       const img=new Image(),idx=i-1;
+      img.onload=img.onerror=()=>{if(++loaded===total)cb();};
       const cap=an.charAt(0).toUpperCase()+an.slice(1);
-      const src=`sprites/triantus/${cap}/Bringer-of-Death_${cap}_${i}.png`;
-      img.onload=()=>{if(++loaded===total)cb();};
-      img.onerror=()=>{console.error('[assets] failed to load',src,'— check the file exists in the repo with this exact name/case.');if(++loaded===total)cb();};
-      img.src=src;
+      img.src=`sprites/triantus/${cap}/Bringer-of-Death_${cap}_${i}.png`;
       images.triantus[an][idx]=img;
     }
   });
@@ -312,8 +308,7 @@ function loadBackgrounds(cb){
   let n=0,total=Object.keys(paths).length;
   Object.entries(paths).forEach(([k,src])=>{
     const img=new Image();
-    img.onload=()=>{bgImages[k]=img;if(++n===total)cb();};
-    img.onerror=()=>{console.error('[assets] failed to load',src,'— check the file exists in the repo with this exact name/case.');bgImages[k]=img;if(++n===total)cb();};
+    img.onload=img.onerror=()=>{bgImages[k]=img;if(++n===total)cb();};
     img.src=src;
   });
 }
@@ -1352,20 +1347,8 @@ function drawLoadingScreen(){
 }
 
 // ── MAIN LOOP ──────────────────────────────────────────────────
-let _lastLoopError=0;
 function gameLoop(){
   requestAnimationFrame(gameLoop);
-  try{
-    runFrame();
-  }catch(err){
-    // Never let one bad frame wedge the whole game — log it (throttled) and keep going.
-    if(Date.now()-_lastLoopError>2000){
-      console.error('[gameLoop] frame error (game will keep running):',err);
-      _lastLoopError=Date.now();
-    }
-  }
-}
-function runFrame(){
   frameCount++;mergeTouchKeys();prevKeys={...keys};
   ctx.clearRect(0,0,CFG.CANVAS_W,CFG.CANVAS_H);
 
