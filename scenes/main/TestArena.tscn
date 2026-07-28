@@ -1,0 +1,228 @@
+[gd_scene load_steps=25 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/player/CameraRig.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/Enemy.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/inventory/Pickup.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/bosses/Octopa.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/Chest.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/PowerTerminal.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/PowerDoor.tscn" id="9"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(40, 1, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ground"]
+size = Vector3(40, 1, 40)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_ns"]
+size = Vector3(40, 4, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ns"]
+size = Vector3(40, 4, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_ew"]
+size = Vector3(1, 4, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ew"]
+size = Vector3(1, 4, 40)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_divider"]
+size = Vector3(18.5, 4, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_divider"]
+size = Vector3(18.5, 4, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_platform"]
+size = Vector3(6, 0.5, 6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_platform"]
+size = Vector3(6, 0.5, 6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ramp"]
+size = Vector3(2, 0.3, 5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ramp"]
+size = Vector3(2, 0.3, 5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bunker_wall"]
+size = Vector3(1, 4, 8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bunker_wall"]
+size = Vector3(1, 4, 8)
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 1
+background_color = Color(0.04, 0.04, 0.06, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.3, 0.3, 0.35, 1)
+ambient_light_energy = 1.0
+
+[node name="TestArena" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-50, -30, 0)
+shadow_enabled = true
+
+[node name="Ground" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("BoxShape3D_ground")
+position = Vector3(0, -0.5, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("BoxMesh_ground")
+position = Vector3(0, -0.5, 0)
+
+[node name="WallNorth" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(0, 2, 20)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallNorth"]
+shape = SubResource("BoxShape3D_wall_ns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallNorth"]
+mesh = SubResource("BoxMesh_wall_ns")
+
+[node name="WallSouth" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(0, 2, -20)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallSouth"]
+shape = SubResource("BoxShape3D_wall_ns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallSouth"]
+mesh = SubResource("BoxMesh_wall_ns")
+
+[node name="WallEast" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(20, 2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallEast"]
+shape = SubResource("BoxShape3D_wall_ew")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallEast"]
+mesh = SubResource("BoxMesh_wall_ew")
+
+[node name="WallWest" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(-20, 2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallWest"]
+shape = SubResource("BoxShape3D_wall_ew")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallWest"]
+mesh = SubResource("BoxMesh_wall_ew")
+
+[node name="DividerWestWall" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(-10.75, 2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DividerWestWall"]
+shape = SubResource("BoxShape3D_divider")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="DividerWestWall"]
+mesh = SubResource("BoxMesh_divider")
+
+[node name="DividerEastWall" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(10.75, 2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DividerEastWall"]
+shape = SubResource("BoxShape3D_divider")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="DividerEastWall"]
+mesh = SubResource("BoxMesh_divider")
+
+[node name="RubblePlatform" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(-10, 3, -10)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RubblePlatform"]
+shape = SubResource("BoxShape3D_platform")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RubblePlatform"]
+mesh = SubResource("BoxMesh_platform")
+
+[node name="RubbleRamp" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(-10, 1.3, -7)
+rotation_degrees = Vector3(-20, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RubbleRamp"]
+shape = SubResource("BoxShape3D_ramp")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RubbleRamp"]
+mesh = SubResource("BoxMesh_ramp")
+
+[node name="BunkerWall" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+position = Vector3(-15, 2, -15)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BunkerWall"]
+shape = SubResource("BoxShape3D_bunker_wall")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="BunkerWall"]
+mesh = SubResource("BoxMesh_bunker_wall")
+
+[node name="Player" parent="." instance=ExtResource("1")]
+position = Vector3(0, 1, -15)
+
+[node name="CameraRig" parent="." instance=ExtResource("2")]
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Enemy" parent="Enemies" instance=ExtResource("3")]
+position = Vector3(8, 1, -8)
+
+[node name="Enemy2" parent="Enemies" instance=ExtResource("3")]
+position = Vector3(-5, 1, -5)
+
+[node name="Bosses" type="Node3D" parent="."]
+
+[node name="Octopa" parent="Bosses" instance=ExtResource("6")]
+position = Vector3(0, 1.3, 12)
+objective_id_on_death = "boss"
+
+[node name="HUD" parent="." instance=ExtResource("4")]
+
+[node name="Pickup" parent="." instance=ExtResource("5")]
+position = Vector3(5, 1, -3)
+
+[node name="LootChest" parent="." instance=ExtResource("7")]
+position = Vector3(14, 0, -5)
+
+[node name="LoreChest" parent="." instance=ExtResource("7")]
+position = Vector3(-17, 0, -15)
+lore_clue_id = "clue_01_signal"
+lore_clue_title = "Fragmented Transmission"
+lore_clue_text = "A corrupted audio log crackles: '...the war wasn't robots against us... it was something else entirely...'"
+
+[node name="TerminalA" parent="." instance=ExtResource("8")]
+position = Vector3(-10, 3.5, -10)
+
+[node name="TerminalB" parent="." instance=ExtResource("8")]
+position = Vector3(10, 0, -12)
+
+[node name="VaultDoor" parent="." instance=ExtResource("9")]
+position = Vector3(0, 0, 0)
+required_terminals = [NodePath("../TerminalA"), NodePath("../TerminalB")]
+objective_id = "vault"
+
+[node name="VaultReward" parent="." instance=ExtResource("7")]
+position = Vector3(3, 0, 3)

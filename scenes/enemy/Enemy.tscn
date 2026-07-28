@@ -1,0 +1,55 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy/Enemy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/common/Health.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/common/Hitbox.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/common/Hurtbox.gd" id="4"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_enemy"]
+radius = 0.5
+height = 1.9
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_enemy"]
+radius = 0.5
+height = 1.9
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_enemy_attack"]
+size = Vector3(1.2, 1.2, 1.2)
+
+[node name="Enemy" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1")
+player_path = NodePath("../../Player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_enemy")
+position = Vector3(0, 0.95, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_enemy")
+position = Vector3(0, 0.95, 0)
+
+[node name="Health" type="Node" parent="."]
+script = ExtResource("2")
+max_health = 60.0
+
+[node name="AttackHitbox" type="Area3D" parent="."]
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("3")
+damage = 10.0
+position = Vector3(0, 0.95, -1.0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="AttackHitbox"]
+shape = SubResource("BoxShape3D_enemy_attack")
+
+[node name="Hurtbox" type="Area3D" parent="."]
+collision_layer = 64
+collision_mask = 8
+script = ExtResource("4")
+health_path = NodePath("../Health")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+shape = SubResource("CapsuleShape3D_enemy")
+position = Vector3(0, 0.95, 0)

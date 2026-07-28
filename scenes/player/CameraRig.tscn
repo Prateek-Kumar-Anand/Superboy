@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/CameraRig.gd" id="1"]
+
+[node name="CameraRig" type="Node3D"]
+script = ExtResource("1")
+target_path = NodePath("../Player")
+
+[node name="SpringArm3D" type="SpringArm3D" parent="."]
+position = Vector3(0, 1.6, 0)
+spring_length = 5.0
+collision_mask = 1
+
+[node name="Camera3D" type="Camera3D" parent="SpringArm3D"]
+current = true
